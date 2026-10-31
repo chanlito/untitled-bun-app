@@ -1,0 +1,43 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "b48b7bfe-612c-4abd-8860-a42f2b6f4b13",
+  "prevIds": ["e1ac0108-8409-4661-9208-5456eebe1d44"],
+  "footprints": [
+    {
+      "statementType": "alter_column",
+      "statementTarget": ["column", "public", "api_keys", "rate_limit_time_window"],
+      "writes": ["s|colprop|public.api_keys.rate_limit_time_window.default"],
+      "reads": [
+        "n|tbl|public.api_keys",
+        "n|sch|public",
+        "n|col|public.api_keys.rate_limit_time_window"
+      ],
+      "sqlHash": "f5af7c91bf73246a"
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": ["column", "public", "api_keys", "rate_limit_max"],
+      "writes": ["s|colprop|public.api_keys.rate_limit_max.default"],
+      "reads": ["n|tbl|public.api_keys", "n|sch|public", "n|col|public.api_keys.rate_limit_max"],
+      "sqlHash": "f501936ba2a3d5d3"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"api_keys\",\"rate_limit_time_window\"]",
+      "set": {
+        "default": "60000"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"api_keys\",\"rate_limit_max\"]",
+      "set": {
+        "default": "600"
+      }
+    }
+  ]
+}

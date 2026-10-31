@@ -20,8 +20,8 @@ export function createApp({ db, mailer }: { db: Db; mailer: Mailer }) {
     cors({
       origin: env.APP_URL,
       credentials: true,
-      // The bearer plugin returns the session token in this header after sign-in
-      exposeHeaders: ['set-auth-token'],
+      // Tokens browser clients need to read: the session (bearer plugin) and a JWT (jwt plugin)
+      exposeHeaders: ['set-auth-token', 'set-auth-jwt'],
     }),
   )
   app.use(async (c, next) => {

@@ -1,9 +1,9 @@
 // `bun run db:seed`: demo data for development. Safe to run more than once.
-import { drizzle } from 'drizzle-orm/bun-sql/postgres'
 import { env } from '../env'
+import { createDb } from './client'
 import { tasks, users } from './schema'
 
-const db = drizzle(env.DATABASE_URL)
+const db = createDb(env.DATABASE_URL)
 
 const demoUsers = [
   { email: 'admin@example.com', name: 'Demo Admin', role: 'admin' },
