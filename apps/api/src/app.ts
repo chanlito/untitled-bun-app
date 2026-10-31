@@ -107,7 +107,11 @@ export function createApp({
   app.notFound((c) => c.json({ message: `Not found: ${c.req.path}` }, 404))
 
   app.onError((err, c) => {
-    if (err instanceof HTTPException) return c.json({ message: err.message }, err.status)
+    if (err instanceof HTTPException) {
+      // An exception built with its own response (headers such as WWW-Authenticate) keeps it
+      if (err.res) return err.getResponse()
+      return c.json({ message: err.message || 'Request failed' }, err.status)
+    }
     logger.error('unhandled error', { requestId: c.var.requestId, err })
     return c.json({ message: 'Internal server error' }, 500)
   })

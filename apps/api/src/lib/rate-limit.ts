@@ -1,5 +1,6 @@
 import type { Context } from 'hono'
 import { createMiddleware } from 'hono/factory'
+import type { AppEnv } from './create-router'
 
 // A fixed-window limit per key (the client IP), kept in this process's memory.
 // With several API instances each counts on its own, so the effective limit is
@@ -12,13 +13,13 @@ export function rateLimit({
 }: {
   max: number
   windowMs?: number
-  key: (c: Context) => string
+  key: (c: Context<AppEnv>) => string
   now?: () => number
 }) {
   const windows = new Map<string, { start: number; count: number }>()
   let lastSweep = now()
 
-  return createMiddleware(async (c, next) => {
+  return createMiddleware<AppEnv>(async (c, next) => {
     if (max <= 0) return next()
     const t = now()
     // Drop finished windows now and then, so one-off clients don't pile up

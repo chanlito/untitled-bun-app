@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { MAX_BODY_BYTES } from './app'
-import { clientIp, rateLimitKey } from './lib/client-ip'
+import { clientIp, parseIp, rateLimitKey } from './lib/client-ip'
 import { createTestApp, type TestApp } from './test/app'
 
 let t: TestApp
@@ -94,17 +94,72 @@ describe('client ip', () => {
     expect(await (await app(1).request('/', { headers: xff })).text()).toBe('203.0.113.7')
   })
 
+  test('an entry that is not an IP falls back to the socket address', async () => {
+    const headers = { 'x-forwarded-for': '1:2:3:4:5:6:7:8::9' }
+    expect(await (await app(1).request('/', { headers })).text()).toBe('unknown')
+  })
+
   test('with two, the entry the outer proxy appended', async () => {
     expect(await (await app(2).request('/', { headers: xff })).text()).toBe('6.6.6.6')
   })
 })
 
+describe('parseIp', () => {
+  test.each([
+    ['203.0.113.7', '203.0.113.7'],
+    [' 203.0.113.7 ', '203.0.113.7'],
+    ['203.0.113.7:51234', '203.0.113.7'],
+    ['[2001:db8::1]:443', '2001:db8::1'],
+    ['2001:DB8::1%eth0', '2001:db8::1'],
+    ['::ffff:203.0.113.7', '203.0.113.7'],
+    ['::1', '::1'],
+  ])('%p is %p', (raw, ip) => expect(parseIp(raw)).toBe(ip))
+
+  test.each(['', 'unknown', '1:2:3:4:5:6:7:8::9', '1::2::3', '999.1.1.1'])(
+    '%p is not an IP',
+    (raw) => expect(parseIp(raw)).toBeNull(),
+  )
+})
+
 describe('rate limit key', () => {
   test('IPv4 is used as is', () => expect(rateLimitKey('203.0.113.7')).toBe('203.0.113.7'))
+  test('anything else unparsed is used as is', () =>
+    expect(rateLimitKey('unknown')).toBe('unknown'))
 
   test('IPv6 addresses in one /64 share a key', () => {
     expect(rateLimitKey('2001:db8:0:1::aaaa')).toBe('2001:db8:0:1::/64')
     expect(rateLimitKey('2001:DB8:0000:0001:ffff:1:2:3')).toBe('2001:db8:0:1::/64')
     expect(rateLimitKey('2001:db8::1')).toBe('2001:db8:0:0::/64')
+    expect(rateLimitKey('::1')).toBe('0:0:0:0::/64')
+  })
+})
+
+describe('on a real server', () => {
+  // bodyLimit swaps in a copied request for bodies without Content-Length, and Bun can't
+  // tell the socket address of a copy: the IP has to be resolved before it runs
+  test('a chunked body still has the socket address as its client IP', async () => {
+    const own = await createTestApp()
+    own.app.post('/ip', async (c) => {
+      await c.req.text()
+      return c.text(c.var.clientIp)
+    })
+    const server = Bun.serve({ port: 0, fetch: (req, s) => own.app.fetch(req, s) })
+    try {
+      const body = new ReadableStream({
+        start(ctl) {
+          ctl.enqueue(new TextEncoder().encode('hi'))
+          ctl.close()
+        },
+      })
+      const res = await fetch(new URL('/ip', server.url), {
+        method: 'POST',
+        body,
+        duplex: 'half',
+      } as RequestInit)
+      expect(await res.text()).toBe('127.0.0.1')
+    } finally {
+      await server.stop(true)
+      await own.close()
+    }
   })
 })

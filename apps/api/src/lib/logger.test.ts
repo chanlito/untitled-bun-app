@@ -31,6 +31,22 @@ describe('logger', () => {
     expect(out[0]!.line).toBe('INFO  request path="/x\\nERROR forged" status=404')
   })
 
+  test('a BigInt or circular value never makes logging throw', () => {
+    const { logger, out } = capture({ format: 'json' })
+    const circular: Record<string, unknown> = {}
+    circular.self = circular
+    logger.error('odd', { n: 1n })
+    logger.error('odder', { circular })
+    expect(JSON.parse(out[0]!.line)).toMatchObject({ n: '1' })
+    expect(out).toHaveLength(2)
+  })
+
+  test('pretty escapes Unicode line separators', () => {
+    const { logger, out } = capture({})
+    logger.info('request', { path: '/x\u2028ERROR forged' })
+    expect(out[0]!.line).not.toContain('\u2028')
+  })
+
   test('drops lines below its level', () => {
     const { logger, out } = capture({ level: 'warn' })
     logger.info('quiet')
