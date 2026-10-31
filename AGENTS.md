@@ -44,9 +44,9 @@ The project's name lives in `project.config.ts`. While `scripts/template/` exist
 
 ## Pull requests
 
-Every change goes through the **pr-writing** and **pr-risks** skills (in `.claude/skills/`) before its PR: `bun .claude/skills/pr-writing/scripts/check.ts` must end with `✓ Ready to push.`, and the PR body comes from `bun .claude/skills/pr-writing/scripts/body.ts`. Changes with a screen also go through **pr-proof** (not set up yet: the app has no production build).
+Every change goes through the **pr-writing** and **pr-risks** skills (in `.claude/skills/`) before its PR: `bun .claude/skills/pr-writing/scripts/check.ts` must end with `✓ Ready to push.`, and the PR body comes from `bun .claude/skills/pr-writing/scripts/body.ts`. **pr-proof** (screenshots) is installed but skipped for now: the app has no production build to shoot, so there is no `site` block in the settings yet.
 
-- Settings live in `show-your-work.json`: the checks above, gitmoji commits, and the paths that make a change High risk (CI, migrations and schema, env, auth, mail).
+- Settings live in `show-your-work.json`: the checks above, gitmoji commits, and the paths that make a change High risk (CI, deps and tooling config, migrations and schema, env, auth, CORS, mail, and the vendored skills themselves, since their scripts run commands).
 - Lessons are committed in `.agents/lessons/`, so cloud agents starting from a fresh clone see them.
 - The skills are vendored by `npx skills add chanlito/skills` (recorded in `skills-lock.json`, which holds a content hash, not a version); update them with `npx skills update`, review the diff, and never edit them by hand. Lint and format skip them (`.eslintignore`, `.prettierignore`).
 

@@ -13,20 +13,24 @@
       "apps/api/drizzle/**",
       "apps/api/src/db/schema/**",
       "apps/api/src/db/migrate.ts",
+      "apps/api/src/app.ts",
+      "apps/api/src/db/client.ts",
       "apps/api/src/env.ts",
       "apps/api/src/lib/auth.ts",
       "apps/api/src/lib/require-user.ts",
       "apps/api/src/lib/mailer.ts",
-      "package.json",
-      "bun.lock",
-      "bunfig.toml",
       "scripts/**",
       "apps/api/drizzle.config.ts",
       "show-your-work.json",
       ".eslintignore",
-      ".prettierignore"
+      ".prettierignore",
+      "**/package.json",
+      "bun.lock",
+      "**/bunfig.toml",
+      ".claude/skills/**",
+      "skills-lock.json"
     ],
-    "medium": ["AGENTS.md", "CLAUDE.md", ".claude/**", ".agents/**", "skills-lock.json"]
+    "medium": ["AGENTS.md", "CLAUDE.md", ".claude/**", ".agents/**"]
   },
   "lessons": "commit"
 }

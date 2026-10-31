@@ -37,8 +37,7 @@ const worktree = await isWorktree()
 if (!Bun.semver.satisfies(Bun.version, `>=${MIN_BUN}`)) {
   fail(`Bun ${MIN_BUN}+ is required (you have ${Bun.version}). Run: bun upgrade --canary`)
 }
-// Probed outside the repo: here, a Bun without the built-in would run the `lint` script,
-// which calls `bun lint` again and never returns
+// Probed outside the repo, so a Bun without the built-in can't fall back to a package script
 if ((await $`bun lint --help`.cwd(tmpdir()).quiet().nothrow()).exitCode !== 0) {
   fail('`bun lint` is missing: it is only in Bun canary for now. Run: bun upgrade --canary')
 }
