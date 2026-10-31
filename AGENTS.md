@@ -5,10 +5,10 @@ Bun + Hono API template: `apps/api` (Hono, `@hono/zod-openapi`, Drizzle 1.0 RC o
 ## Getting going
 
 - `bun run setup` then `bun run dev`. Setup is safe to repeat. In a git worktree it writes that worktree's own database and ports to `.env.local`, so read URLs from there, not from the defaults.
-- Bun **canary** is required: `bun lint` is not in a stable release yet.
+- Bun **canary** is required: `bun lint` is not in a stable release yet, so `bun run lint:check` fails fast on stable Bun.
 - `bun test` needs nothing running: tests use an in-process PGlite copy of the migrated schema.
 - To sign in by hand in dev, request a code (`POST /api/auth/email-otp/send-verification-otp`) and read it from Mailpit's `GET http://localhost:3145/api/v1/message/latest` or the API's console.
-- Done means `bun run lint`, `bun run fmt:check`, `bun run typecheck` and `bun test` all pass; CI runs exactly these.
+- Done means `bun run lint:check`, `bun run fmt:check`, `bun run typecheck` and `bun test` all pass; CI runs exactly these.
 
 ## Layering (apps/api)
 
@@ -27,7 +27,7 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 - **zod-openapi types**: keep shared response maps (`authErrors`, `notFound`) as plain objects, since spreading an `as const` map drops it from the route's typed responses. Give `security` an explicit `Record<string, string[]>[]` type. Register router middleware with separate `router.use(...)` calls and chain only `.openapi(...)`, because `.use()` returns a plain `Hono`.
 - **Typed client**: responses are unions per status; narrow on `res.ok` or `res.status` before reading the body.
 - **Better Auth**: field names in `src/db/schema/auth.ts` must match Better Auth's; its adapter looks columns up by key. A new plugin with tables needs those tables added there (list them with `getAuthTables` from `better-auth/db`).
-- **Root script names**: a script named like a Bun command shadows it (`bun check` would run a `check` script), hence `typecheck`.
+- **Root script names**: a script named like a Bun command shadows it (`bun check` would run a `check` script), hence `typecheck`, and `lint:check` (a `lint` script would make `bun lint` on stable Bun call itself forever).
 
 ## Tests
 
