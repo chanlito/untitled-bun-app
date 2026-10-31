@@ -15,7 +15,7 @@
   "dependencies": {
     "@better-auth/api-key": "1.7.14",
     "@hono/zod-openapi": "catalog:",
-    "@untitled-bun-app/project": "workspace:*",
+    "@untitled-bun-app/config": "workspace:*",
     "@untitled-bun-app/shared": "workspace:*",
     "@scalar/hono-api-reference": "^0.12.17",
     "better-auth": "1.7.14",

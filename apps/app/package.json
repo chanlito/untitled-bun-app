@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@untitled-bun-app/client": "workspace:*",
-    "@untitled-bun-app/project": "workspace:*"
+    "@untitled-bun-app/config": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "catalog:"

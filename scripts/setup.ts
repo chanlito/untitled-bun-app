@@ -10,7 +10,7 @@ import { parseArgs } from 'node:util'
 
 import { $ } from 'bun'
 
-import { project } from '../packages/project/src/index.ts'
+import { project } from '../packages/config/project.config.ts'
 import {
   envLocalPath,
   fail,

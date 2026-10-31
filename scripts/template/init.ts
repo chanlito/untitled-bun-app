@@ -19,7 +19,7 @@ export const SCOPE = `@${TEMPLATE.slug}/`
 
 // The only tracked files that may contain the template's name other than in SCOPE
 export const RENAMED_FILES = [
-  'packages/project/src/index.ts',
+  'packages/config/project.config.ts',
   'package.json',
   'docker-compose.yml',
   'README.md',
@@ -98,8 +98,8 @@ async function rename(name: string, slug: string) {
     )
   }
   const quoted = `'${name.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`
-  await replaceIn('packages/project/src/index.ts', `'${TEMPLATE.name}'`, quoted)
-  await replaceIn('packages/project/src/index.ts', `'${TEMPLATE.slug}'`, `'${slug}'`)
+  await replaceIn('packages/config/project.config.ts', `'${TEMPLATE.name}'`, quoted)
+  await replaceIn('packages/config/project.config.ts', `'${TEMPLATE.slug}'`, `'${slug}'`)
   await replaceIn('package.json', `"name": "${TEMPLATE.slug}"`, `"name": "${slug}"`)
   // bun install keeps the old root name in the lockfile, so rename it here
   await replaceIn('bun.lock', `"name": "${TEMPLATE.slug}"`, `"name": "${slug}"`)

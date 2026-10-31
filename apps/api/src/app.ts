@@ -1,5 +1,5 @@
 import { Scalar } from '@scalar/hono-api-reference'
-import { project } from '@untitled-bun-app/project'
+import { project } from '@untitled-bun-app/config'
 import { rateLimiter } from 'hono-rate-limiter'
 import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'

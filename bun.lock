@@ -14,7 +14,7 @@
         "@better-auth/api-key": "1.7.14",
         "@hono/zod-openapi": "catalog:",
         "@scalar/hono-api-reference": "^0.12.17",
-        "@untitled-bun-app/project": "workspace:*",
+        "@untitled-bun-app/config": "workspace:*",
         "@untitled-bun-app/shared": "workspace:*",
         "better-auth": "1.7.14",
         "drizzle-orm": "1.0.0-rc.5",
@@ -35,7 +35,7 @@
       "name": "@untitled-bun-app/app",
       "dependencies": {
         "@untitled-bun-app/client": "workspace:*",
-        "@untitled-bun-app/project": "workspace:*",
+        "@untitled-bun-app/config": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "catalog:",
@@ -51,8 +51,8 @@
         "@untitled-bun-app/api": "workspace:*",
       },
     },
-    "packages/project": {
-      "name": "@untitled-bun-app/project",
+    "packages/config": {
+      "name": "@untitled-bun-app/config",
     },
     "packages/shared": {
       "name": "@untitled-bun-app/shared",
@@ -129,7 +129,7 @@
 
     "@untitled-bun-app/client": ["@untitled-bun-app/client@workspace:packages/client"],
 
-    "@untitled-bun-app/project": ["@untitled-bun-app/project@workspace:packages/project"],
+    "@untitled-bun-app/config": ["@untitled-bun-app/config@workspace:packages/config"],
 
     "@untitled-bun-app/shared": ["@untitled-bun-app/shared@workspace:packages/shared"],
 

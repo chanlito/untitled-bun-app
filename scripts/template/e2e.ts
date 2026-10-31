@@ -93,11 +93,8 @@ try {
     TEMPLATE_ONLY.every((path) => !tracked.some((f) => f === path || f.startsWith(`${path}/`))),
     'template-only files are gone',
   )
-  const config = await Bun.file(join(dir, 'packages/project/src/index.ts')).text()
-  check(
-    config.includes(`'${NAME}'`) && config.includes(`'${SLUG}'`),
-    'the project package is renamed',
-  )
+  const config = await Bun.file(join(dir, 'packages/config/project.config.ts')).text()
+  check(config.includes(`'${NAME}'`) && config.includes(`'${SLUG}'`), 'project.config.ts renamed')
   const manifest = (await Bun.file(join(dir, 'apps/api/package.json')).json()) as { name: string }
   check(manifest.name === `@${SLUG}/api`, `packages are scoped @${SLUG}/*`)
   const log = (await git('log', '--format=%s')).trim().split('\n')

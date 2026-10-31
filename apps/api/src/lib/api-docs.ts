@@ -1,4 +1,4 @@
-import { project } from '@untitled-bun-app/project'
+import { project } from '@untitled-bun-app/config'
 
 type IntroOptions = {
   apiUrl: string
