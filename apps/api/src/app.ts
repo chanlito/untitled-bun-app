@@ -1,6 +1,7 @@
 import { Scalar } from '@scalar/hono-api-reference'
 import { config } from '@untitled-bun-app/config'
 import { rateLimiter } from 'hono-rate-limiter'
+import { accepts } from 'hono/accepts'
 import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
@@ -14,6 +15,7 @@ import { apiIntro } from './lib/api-docs'
 import { createAuth } from './lib/auth'
 import { clientIp, rateLimitKey } from './lib/client-ip'
 import { type AppEnv, createRouter } from './lib/create-router'
+import { LANDING_CSP, landingJson, landingPage } from './lib/landing-page'
 import { createLogger, type Logger } from './lib/logger'
 import type { Mailer } from './lib/mailer'
 import { tasksRouter } from './modules/tasks/tasks.index'
@@ -23,6 +25,8 @@ import { createServices } from './services'
 export const MAX_BODY_BYTES = 1024 * 1024
 // A handler still running after this gets a 504; index.ts keeps idle sockets open longer
 export const REQUEST_TIMEOUT_MS = 30_000
+// The API's version, in the OpenAPI spec and on the landing page. Bump it when you release.
+export const API_VERSION = '0.0.0'
 
 export type AppOptions = {
   db: Db
@@ -62,8 +66,8 @@ export function createApp({
     else logger.info(fields, 'request')
   })
 
-  // Hono's defaults: HSTS, nosniff, frame denial, no referrer leaks, and so on. No CSP:
-  // this serves JSON and Scalar's page, which loads its script from a CDN.
+  // Hono's defaults: HSTS, nosniff, frame denial, no referrer leaks, and so on. No global CSP:
+  // Scalar's page loads its script from a CDN. The landing page at / sets its own strict one.
   app.use(secureHeaders())
 
   app.use(
@@ -151,7 +155,7 @@ export function createApp({
     openapi: '3.1.0',
     info: {
       title: `${config.name} API`,
-      version: '0.0.0',
+      version: API_VERSION,
       description: apiIntro({
         apiUrl: env.API_URL,
         maxBodyBytes: MAX_BODY_BYTES,
@@ -161,6 +165,21 @@ export function createApp({
     },
     servers: [{ url: env.API_URL }],
     tags: [{ name: 'Tasks', description: 'Your to-do items. You only ever see your own.' }],
+  })
+
+  // Browsers get a small page with links to the docs; everything else (curl's */*, fetch,
+  // monitors) gets the same links as JSON. Kept out of AppType and the spec, like /reference.
+  app.get('/', (c) => {
+    const info = { apiUrl: env.API_URL, version: API_VERSION, environment: env.NODE_ENV }
+    c.header('Vary', 'Accept')
+    const type = accepts(c, {
+      header: 'Accept',
+      supports: ['application/json', 'text/html'],
+      default: 'application/json',
+    })
+    if (type !== 'text/html') return c.json(landingJson(info))
+    c.header('Content-Security-Policy', LANDING_CSP)
+    return c.html(landingPage(info))
   })
 
   app.get(
