@@ -19,8 +19,6 @@
       "scripts/**",
       "apps/api/drizzle.config.ts",
       "show-your-work.json",
-      ".eslintignore",
-      ".prettierignore",
       "**/package.json",
       "bun.lock",
       "**/bunfig.toml",

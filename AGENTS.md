@@ -50,7 +50,7 @@ Every change goes through the **pr-writing** and **pr-risks** skills (in `.claud
 
 - Settings live in `show-your-work.json`: the checks above, gitmoji commits, and the paths that make a change High risk (CI, deps and tooling config, migrations and schema, env, auth, CORS, mail, and the vendored skills themselves, since their scripts run commands).
 - Lessons are committed in `.agents/lessons/`, so cloud agents starting from a fresh clone see them.
-- The skills are vendored by `npx skills add chanlito/skills` (recorded in `skills-lock.json`, which holds a content hash, not a version); update them with `npx skills update`, review the diff, and never edit them by hand. Lint and format skip them (`.eslintignore`, `.prettierignore`).
+- The skills are vendored by `npx skills add chanlito/skills` (recorded in `skills-lock.json`, which holds a content hash, not a version); update them with `npx skills update`, review the diff, and never edit them by hand. Lint and format skip them (`ignorePatterns` in `bunfig.toml`).
 
 ## Agent skills
 

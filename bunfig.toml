@@ -2,6 +2,17 @@
 printWidth = 100
 semi = false
 singleQuote = true
+# Vendored by `npx skills add chanlito/skills`: an update replaces them
+ignorePatterns = [
+  ".claude/skills/pr-proof/",
+  ".claude/skills/pr-risks/",
+  ".claude/skills/pr-writing/",
+]
 
 [lint]
 typeAware = true
+ignorePatterns = [
+  ".claude/skills/pr-proof/",
+  ".claude/skills/pr-risks/",
+  ".claude/skills/pr-writing/",
+]
