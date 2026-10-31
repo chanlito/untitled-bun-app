@@ -40,7 +40,9 @@ describe('app', () => {
     expect(csp).not.toContain('script-src')
     const page = await res.text()
     expect(page).toContain(`<title>${config.name} API</title>`)
-    for (const href of ['/reference', '/doc', '/health']) expect(page).toContain(`href="${href}"`)
+    // The links are the URLs in the JSON it shows
+    for (const path of ['/reference', '/doc', '/health'])
+      expect(page).toMatch(new RegExp(`href="[^"]*${path}"`))
     expect(page).not.toContain('<script')
     // The terminal shows the same JSON an API client gets, escaped
     expect(page).toContain('<span class="k">&quot;links&quot;</span>')
