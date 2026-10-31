@@ -54,8 +54,9 @@ docker-compose.yml       # Postgres and Mailpit
 | `bun run setup`       | Install, env, Docker services, database, migrations |
 | `bun run dev`         | API and app with hot reload                         |
 | `bun test`            | All tests                                           |
-| `bun run lint`        | `bun lint`, type-aware                              |
-| `bun run fmt`         | `bun fmt`                                           |
+| `bun run verify`      | Lint, format check, type check and tests, like CI   |
+| `bun lint`            | Lint, type-aware                                    |
+| `bun fmt`             | Format everything                                   |
 | `bun run typecheck`   | `bun check` for each workspace                      |
 | `bun run db:generate` | New migration from schema changes                   |
 | `bun run db:migrate`  | Apply migrations                                    |

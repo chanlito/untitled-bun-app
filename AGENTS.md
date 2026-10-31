@@ -5,10 +5,10 @@ Bun + Hono API template: `apps/api` (Hono, `@hono/zod-openapi`, Drizzle 1.0 RC o
 ## Getting going
 
 - `bun run setup` then `bun run dev`. Setup is safe to repeat. In a git worktree it writes that worktree's own database and ports to `.env.local`, so read URLs from there, not from the defaults.
-- Bun **canary** is required: `bun lint` is not in a stable release yet.
+- Bun **canary** is required: `bun lint` is not in a stable release yet (on stable Bun it fails with `Script not found "lint"`).
 - `bun test` needs nothing running: tests use an in-process PGlite copy of the migrated schema.
 - To sign in by hand in dev, request a code (`POST /api/auth/email-otp/send-verification-otp`) and read it from Mailpit's `GET http://localhost:3145/api/v1/message/latest` or the API's console.
-- Done means `bun run lint`, `bun run fmt:check`, `bun run typecheck` and `bun test` all pass; CI runs exactly these.
+- Done means `bun run verify` passes: `bun lint --max-warnings 0`, `bun fmt --check`, `bun run typecheck` and `bun test`. CI runs exactly these.
 
 ## Layering (apps/api)
 
@@ -27,7 +27,7 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 - **zod-openapi types**: keep shared response maps (`authErrors`, `notFound`) as plain objects, since spreading an `as const` map drops it from the route's typed responses. Give `security` an explicit `Record<string, string[]>[]` type. Register router middleware with separate `router.use(...)` calls and chain only `.openapi(...)`, because `.use()` returns a plain `Hono`.
 - **Typed client**: responses are unions per status; narrow on `res.ok` or `res.status` before reading the body.
 - **Better Auth**: field names in `src/db/schema/auth.ts` must match Better Auth's; its adapter looks columns up by key. A new plugin with tables needs those tables added there (list them with `getAuthTables` from `better-auth/db`).
-- **Root script names**: a script named like a Bun command shadows it (`bun check` would run a `check` script), hence `typecheck`.
+- **Root script names**: a script named like a Bun command shadows it (`bun check` would run a `check` script), hence `typecheck`, and no `lint` or `fmt` scripts: call the built-ins directly (a `lint` script made `bun lint` on stable Bun call itself forever).
 
 ## Tests
 
@@ -38,9 +38,19 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 
 The project's name lives in `project.config.ts`. While `scripts/template/` exists (the template repo itself), its test fails if the template's name appears outside the files init renames; use `project.name` / `project.slug`.
 
-## Commits
+## Branches and commits
+
+Branches are named `<type>/<short-name>` after the work, like `feat/csv-export` or `fix/lint-recursion`, never `claude/*`.
 
 `<gitmoji> <type>(<scope>): <message>`, scope optional, e.g. `✨ feat(api): add tasks routes`, `🐛 fix: …`, `📝 docs: …`. Scopes are free-form.
+
+## Pull requests
+
+Every change goes through the **pr-writing** and **pr-risks** skills (in `.claude/skills/`) before its PR: `bun .claude/skills/pr-writing/scripts/check.ts` must end with `✓ Ready to push.`, and the PR body comes from `bun .claude/skills/pr-writing/scripts/body.ts`. **pr-proof** (screenshots) is installed but skipped for now: the app has no production build to shoot, so there is no `site` block in the settings yet.
+
+- Settings live in `show-your-work.json`: the checks above, gitmoji commits, and the paths that make a change High risk (CI, deps and tooling config, migrations and schema, env, auth, CORS, mail, and the vendored skills themselves, since their scripts run commands).
+- Lessons are committed in `.agents/lessons/`, so cloud agents starting from a fresh clone see them.
+- The skills are vendored by `npx skills add chanlito/skills` (recorded in `skills-lock.json`, which holds a content hash, not a version); update them with `npx skills update`, review the diff, and never edit them by hand. Lint and format skip them (`ignorePatterns` in `bunfig.toml`).
 
 ## Agent skills
 
