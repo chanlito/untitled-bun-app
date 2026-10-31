@@ -1,12 +1,12 @@
 import { z } from '@hono/zod-openapi'
-import { taskTitle } from '@repo/shared'
+import { taskTitle } from '@untitled-bun-app/shared'
 
 const id = z.string().openapi({
   description: "The task's id. Opaque: compare it, don't parse it.",
   example: '019a3a5e-7c1f-7b4e-9d2a-5f0c1e8b3a47',
 })
 
-// The rules come from @repo/shared, so a frontend can check a form the same way
+// The rules come from @untitled-bun-app/shared, so a frontend can check a form the same way
 const title = taskTitle.openapi({
   description: 'What needs doing. Surrounding whitespace is trimmed; 1 to 200 characters remain.',
   example: 'Renew the domain',

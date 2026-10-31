@@ -12,9 +12,6 @@
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["bun"],
-    "paths": {
-      "@project": ["./project.config.ts"]
-    }
+    "types": ["bun"]
   }
 }

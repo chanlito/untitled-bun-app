@@ -13,9 +13,13 @@ export const TEMPLATE = {
   slug: 'untitled-bun-app',
 }
 
-// The only tracked files that may contain the template's name (see template.test.ts)
+// The workspace packages' scope: `@untitled-bun-app/api` becomes `@my-app/api`. It may
+// appear in any tracked file; init rewrites it wherever it is (see template.test.ts).
+export const SCOPE = `@${TEMPLATE.slug}/`
+
+// The only tracked files that may contain the template's name other than in SCOPE
 export const RENAMED_FILES = [
-  'project.config.ts',
+  'packages/project/src/index.ts',
   'package.json',
   'docker-compose.yml',
   'README.md',
@@ -75,6 +79,8 @@ export async function runInit({ name, yes }: { name?: string; yes?: boolean }) {
 
   await rename(finalName, slug)
   step(`Renamed to "${finalName}" (${RENAMED_FILES.join(', ')})`)
+  await renameScope(slug)
+  step(`Renamed the packages to @${slug}/* (${scoped.length} files)`)
 
   for (const path of TEMPLATE_ONLY) rmSync(`${root}${path}`, { recursive: true, force: true })
   step(`Removed template-only files (${TEMPLATE_ONLY.join(', ')})`)
@@ -92,8 +98,8 @@ async function rename(name: string, slug: string) {
     )
   }
   const quoted = `'${name.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`
-  await replaceIn('project.config.ts', `'${TEMPLATE.name}'`, quoted)
-  await replaceIn('project.config.ts', `'${TEMPLATE.slug}'`, `'${slug}'`)
+  await replaceIn('packages/project/src/index.ts', `'${TEMPLATE.name}'`, quoted)
+  await replaceIn('packages/project/src/index.ts', `'${TEMPLATE.slug}'`, `'${slug}'`)
   await replaceIn('package.json', `"name": "${TEMPLATE.slug}"`, `"name": "${slug}"`)
   // bun install keeps the old root name in the lockfile, so rename it here
   await replaceIn('bun.lock', `"name": "${TEMPLATE.slug}"`, `"name": "${slug}"`)
@@ -102,10 +108,24 @@ async function rename(name: string, slug: string) {
   await replaceIn('README.md', /^# .*$/m, `# ${name}`)
 }
 
+// Every tracked file that names a package by its scope: manifests, imports, scripts, docs
+let scoped: string[] = []
+async function renameScope(slug: string) {
+  const out = await $`git grep -lF ${SCOPE}`.cwd(root).quiet().nothrow().text()
+  scoped = out.split('\n').filter(Boolean)
+  for (const file of scoped) {
+    const path = `${root}${file}`
+    await Bun.write(path, (await Bun.file(path).text()).replaceAll(SCOPE, `@${slug}/`))
+  }
+  // A new scope can sort differently among the other imports (`@acme/` before `@hono/`)
+  const code = scoped.filter((file) => /\.[cm]?tsx?$/.test(file))
+  if (code.length) await $`bun fmt ${code}`.cwd(root).quiet()
+}
+
 // Commits exactly what init changed, leaving any other work in the tree alone.
 // Setup calls it right after runInit, before anything else can fail.
 export async function commitInit() {
-  const paths = [...RENAMED_FILES, ...TEMPLATE_ONLY]
+  const paths = [...new Set([...RENAMED_FILES, ...scoped, ...TEMPLATE_ONLY])]
   await $`git add -A -- ${paths}`.cwd(root).quiet()
   await $`git commit -q -m ${'🎉 chore: initialize from template'} -- ${paths}`.cwd(root).quiet()
   step('Committed: 🎉 chore: initialize from template')

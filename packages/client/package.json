@@ -1,5 +1,5 @@
 {
-  "name": "@repo/client",
+  "name": "@untitled-bun-app/client",
   "private": true,
   "type": "module",
   "exports": {
@@ -9,7 +9,7 @@
     "hono": "catalog:"
   },
   "devDependencies": {
-    "@repo/api": "workspace:*",
+    "@untitled-bun-app/api": "workspace:*",
     "@types/bun": "catalog:"
   }
 }

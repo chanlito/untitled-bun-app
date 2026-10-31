@@ -5,7 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import { $ } from 'bun'
 
 import { root } from '../lib'
-import { isTemplateRemote, RENAMED_FILES, slugify } from './init'
+import { isTemplateRemote, RENAMED_FILES, SCOPE, slugify } from './init'
 
 const ALLOWED = new Set(RENAMED_FILES)
 
@@ -15,7 +15,8 @@ describe('template', () => {
     const offenders: string[] = []
     for (const file of tracked) {
       if (ALLOWED.has(file) || file.startsWith('scripts/template/')) continue
-      const text = await Bun.file(`${root}${file}`).text()
+      // The package scope may appear anywhere: init renames it in every file
+      const text = (await Bun.file(`${root}${file}`).text()).replaceAll(SCOPE, '')
       if (/untitled/i.test(text)) offenders.push(file)
     }
     expect(offenders).toEqual([])

@@ -1,5 +1,5 @@
 import { apiKey } from '@better-auth/api-key'
-import { project } from '@project'
+import { project } from '@untitled-bun-app/project'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { admin, bearer, emailOTP, jwt, magicLink, openAPI } from 'better-auth/plugins'

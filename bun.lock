@@ -9,12 +9,13 @@
       },
     },
     "apps/api": {
-      "name": "@repo/api",
+      "name": "@untitled-bun-app/api",
       "dependencies": {
         "@better-auth/api-key": "1.7.14",
         "@hono/zod-openapi": "catalog:",
-        "@repo/shared": "workspace:*",
         "@scalar/hono-api-reference": "^0.12.17",
+        "@untitled-bun-app/project": "workspace:*",
+        "@untitled-bun-app/shared": "workspace:*",
         "better-auth": "1.7.14",
         "drizzle-orm": "1.0.0-rc.5",
         "hono": "catalog:",
@@ -31,26 +32,30 @@
       },
     },
     "apps/app": {
-      "name": "@repo/app",
+      "name": "@untitled-bun-app/app",
       "dependencies": {
-        "@repo/client": "workspace:*",
+        "@untitled-bun-app/client": "workspace:*",
+        "@untitled-bun-app/project": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "catalog:",
       },
     },
     "packages/client": {
-      "name": "@repo/client",
+      "name": "@untitled-bun-app/client",
       "dependencies": {
         "hono": "catalog:",
       },
       "devDependencies": {
-        "@repo/api": "workspace:*",
         "@types/bun": "catalog:",
+        "@untitled-bun-app/api": "workspace:*",
       },
     },
+    "packages/project": {
+      "name": "@untitled-bun-app/project",
+    },
     "packages/shared": {
-      "name": "@repo/shared",
+      "name": "@untitled-bun-app/shared",
       "dependencies": {
         "zod": "catalog:",
       },
@@ -100,14 +105,6 @@
 
     "@pinojs/redact": ["@pinojs/redact@0.4.0", "", {}, "sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg=="],
 
-    "@repo/api": ["@repo/api@workspace:apps/api"],
-
-    "@repo/app": ["@repo/app@workspace:apps/app"],
-
-    "@repo/client": ["@repo/client@workspace:packages/client"],
-
-    "@repo/shared": ["@repo/shared@workspace:packages/shared"],
-
     "@scalar/client-side-rendering": ["@scalar/client-side-rendering@0.4.16", "", { "dependencies": { "@scalar/helpers": "0.16.4", "@scalar/schemas": "0.16.0", "@scalar/types": "0.26.0", "@scalar/validation": "0.6.7" } }, "sha512-C6g3yGa6DwK++L0yxB6oebTc4fCdU/n/FrOK+08UdK4RK24bTvgcCcvjh8k6OVXDMyCodSf73ZERwVWYlnkaxA=="],
 
     "@scalar/helpers": ["@scalar/helpers@0.16.4", "", {}, "sha512-9eILWzUcAkHEuYMMvijpSIy69t+Vkq+NudLB/7lgARFTWqXfQpIxW1L3VH7ogKyRie5+E4CNZ3PSvlw6IIfLGw=="],
@@ -125,6 +122,16 @@
     "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
     "@types/node": ["@types/node@26.6.6", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog=="],
+
+    "@untitled-bun-app/api": ["@untitled-bun-app/api@workspace:apps/api"],
+
+    "@untitled-bun-app/app": ["@untitled-bun-app/app@workspace:apps/app"],
+
+    "@untitled-bun-app/client": ["@untitled-bun-app/client@workspace:packages/client"],
+
+    "@untitled-bun-app/project": ["@untitled-bun-app/project@workspace:packages/project"],
+
+    "@untitled-bun-app/shared": ["@untitled-bun-app/shared@workspace:packages/shared"],
 
     "atomic-sleep": ["atomic-sleep@1.0.0", "", {}, "sha512-kNOjDqAh7px0XWNI+4QbzoiR/nTkHAWNud2uvnJquD1/x5a7EQZMJT0AczqK0Qn67oY/TTQ1LbUKajZpp3I9tQ=="],
 

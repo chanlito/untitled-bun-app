@@ -1,5 +1,5 @@
 {
-  "name": "@repo/app",
+  "name": "@untitled-bun-app/app",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "test -n \"$BUN_PUBLIC_API_URL\" || { echo 'Set BUN_PUBLIC_API_URL to the API URL the app should call' >&2; exit 1; }; bun build index.html --outdir=dist --minify --env='BUN_PUBLIC_*'"
   },
   "dependencies": {
-    "@repo/client": "workspace:*"
+    "@untitled-bun-app/client": "workspace:*",
+    "@untitled-bun-app/project": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "catalog:"

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 
-import { project } from '@project'
+import { project } from '@untitled-bun-app/project'
 
 import { createTestApp, type TestApp } from './test/app'
 
