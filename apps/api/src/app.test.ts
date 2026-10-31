@@ -35,10 +35,14 @@ describe('app', () => {
   })
 
   test('the Scalar UI hides its developer tools, AI agent and footer credit', async () => {
-    const html = await (await t.app.request('/reference')).text()
-    expect(html).toContain('"showDeveloperTools": "never"')
-    expect(html).toMatch(/"agent": \{\s*"disabled": true/)
-    expect(html).toContain('utm_source=powered-by')
+    const html = (await (await t.app.request('/reference')).text()).replace(/\s/g, '')
+    // A cdn URL would switch Scalar to its UMD loader, which can't load esm.js: the page goes blank
+    expect(html).toContain(
+      "import{createApiReference}from'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.76.4/esm.js'",
+    )
+    expect(html).toContain('"showDeveloperTools":"never"')
+    expect(html).toContain('"agent":{"disabled":true}')
+    expect(html).toContain('a[href*=\\"utm_source=powered-by\\"]{display:none;}')
   })
 
   test("the auth spec is served for Scalar's second source", async () => {

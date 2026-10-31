@@ -152,6 +152,8 @@ export function createApp({
     '/reference',
     Scalar({
       pageTitle: project.name,
+      // Pinned (as the ESM bundle, not cdn): the hidden footer relies on this release's markup
+      bundle: 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.76.4/esm.js',
       showDeveloperTools: 'never',
       agent: { disabled: true },
       // Scalar has no option for its footer credit, so hide its link
