@@ -18,7 +18,6 @@
     "setup": "bun scripts/setup.ts",
     "dev": "bun scripts/predev.ts && bun run --parallel --filter '@repo/*' dev",
     "lint:check": "bun lint --max-warnings 0",
-    "fmt": "bun fmt",
     "fmt:check": "bun fmt --check",
     "typecheck": "bun check && bun check -p apps/api && bun check -p apps/app",
     "test": "bun test",

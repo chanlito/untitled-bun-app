@@ -27,7 +27,7 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 - **zod-openapi types**: keep shared response maps (`authErrors`, `notFound`) as plain objects, since spreading an `as const` map drops it from the route's typed responses. Give `security` an explicit `Record<string, string[]>[]` type. Register router middleware with separate `router.use(...)` calls and chain only `.openapi(...)`, because `.use()` returns a plain `Hono`.
 - **Typed client**: responses are unions per status; narrow on `res.ok` or `res.status` before reading the body.
 - **Better Auth**: field names in `src/db/schema/auth.ts` must match Better Auth's; its adapter looks columns up by key. A new plugin with tables needs those tables added there (list them with `getAuthTables` from `better-auth/db`).
-- **Root script names**: a script named like a Bun command shadows it (`bun check` would run a `check` script), hence `typecheck`, and `lint:check` (a `lint` script would make `bun lint` on stable Bun call itself forever).
+- **Root script names**: a script named like a Bun command shadows it (`bun check` would run a `check` script), hence `typecheck`, `lint:check`, and no `fmt` script (`bun fmt` is the built-in) (a `lint` script would make `bun lint` on stable Bun call itself forever).
 
 ## Tests
 
