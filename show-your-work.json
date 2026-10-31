@@ -1,5 +1,5 @@
 {
-  "checks": ["bun run lint:check", "bun run fmt:check", "bun run typecheck", "bun test"],
+  "checks": ["bun run verify"],
   "commits": "gitmoji",
   "tiers": {
     "high": [
