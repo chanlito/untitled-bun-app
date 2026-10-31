@@ -15,9 +15,9 @@ export function apiIntro({ apiUrl, maxBodyBytes, timeoutMs, rateLimitPerMinute }
       ? `Each client IP address can make **${rateLimitPerMinute} requests a minute** to the endpoints in this reference.`
       : 'This deployment has no per-IP request limit.'
 
-  return `The ${project.name} API is a JSON-over-HTTPS API for managing a user's tasks.
+  return `How to call the ${project.name} API: getting a credential, the shape of errors, the limits, and the conventions every endpoint shares. The endpoints themselves are listed after this page.
 
-Every request and response body is JSON (\`content-type: application/json\`), and every endpoint acts as one user: the user behind the credential you send.
+Request and response bodies are JSON (\`content-type: application/json\`). An endpoint that needs a credential acts as the user behind it.
 
 ## Base URL
 
@@ -27,7 +27,7 @@ ${apiUrl}
 
 ## Authentication
 
-Send one of these credentials with every request to a Tasks endpoint. Without a valid one you get \`401\`.
+Most endpoints need one of these credentials, and each endpoint lists the ones it accepts. Without a valid one you get \`401\`.
 
 ### Session token (apps acting for a person)
 
@@ -64,7 +64,7 @@ Every sign-in and key endpoint is documented in the **Auth** reference: pick it 
 Every error has the same shape. Show \`message\` to a developer, not to an end user:
 
 \`\`\`json
-{ "message": "Task not found" }
+{ "message": "Unauthorized" }
 \`\`\`
 
 A \`422\` also lists what was wrong with the input, one entry per field:
@@ -109,7 +109,6 @@ Every response has an \`X-Request-Id\` header. Send your own (up to 255 letters,
 
 - IDs are opaque strings. Don't parse them.
 - Timestamps are ISO 8601 in UTC, like \`2026-10-31T15:04:05.000Z\`.
-- Lists are returned whole, newest first.
-- A user only ever sees their own data. Another user's task id returns \`404\`, never \`403\`, so you can't tell whether it exists.
+- A user only ever sees their own data. Another user's record returns \`404\`, never \`403\`, so you can't tell whether it exists.
 `
 }
