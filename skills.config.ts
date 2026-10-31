@@ -39,8 +39,20 @@ export default {
       '.claude/skills/**',
       'skills-lock.json',
     ],
-    // Instructions agents follow on every change.
-    medium: ['AGENTS.md', 'CLAUDE.md', '.claude/**', '.agents/**'],
+    medium: [
+      // Instructions agents follow on every change: never Low.
+      'AGENTS.md',
+      'CLAUDE.md',
+      '.claude/**',
+      '.agents/**',
+    ],
+    // Anything not listed is Medium.
+    low: [
+      // Docs and content only: nothing runs differently.
+      '**/*.md',
+      '**/*.mdx',
+      'docs/**',
+    ],
   },
   // Committed in .agents/lessons/, so cloud agents on a fresh clone see them.
   lessons: 'commit',
