@@ -38,8 +38,9 @@ const FAVICON = `data:image/svg+xml,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#111418"/><path d="M9 11l6 5-6 5M17 21h6" stroke="#f5c451" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 )}`
 
-// The JSON a client gets, pretty-printed with keys and strings marked for colour. Built as a
-// string (an html`` template would get its whitespace reformatted) with every value escaped,
+// The JSON a client gets, pretty-printed with keys and strings marked for colour. It handles
+// nested objects of strings, which is all landingJson returns (no arrays). Built as a string
+// (an html`` template would get its whitespace reformatted) with every value escaped,
 // so text from config or env can't break out of the page.
 function highlightJson(value: unknown, indent = ''): string {
   if (typeof value === 'string')
@@ -255,7 +256,7 @@ export function landingPage(options: LandingOptions) {
               <p class="m"># ${config.description}</p>
             </div>
             <div>
-              <p><span class="m">$</span> curl -s ${apiUrl}/</p>
+              <p><span class="m">$</span> curl -s ${apiUrl}/ | jq</p>
               <pre>${raw(highlightJson(landingJson(options)))}</pre>
             </div>
             <nav aria-label="Where to go next">
