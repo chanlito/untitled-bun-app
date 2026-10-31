@@ -3,7 +3,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { SMTPServer } from 'smtp-server'
 
 import { createMemoryLogger } from './logger'
-import { createSmtpMailer } from './mailer'
+import { createSmtpMailer, requiresTls } from './mailer'
 
 type Received = { from: string; to: string[]; raw: string }
 
@@ -93,5 +93,12 @@ describe('SMTP mailer', () => {
     await expect(sent).rejects.toThrow(/STARTTLS/)
     mailer.close?.()
     expect(received).toHaveLength(0)
+  })
+
+  test('STARTTLS is required by default for every server not on this machine', () => {
+    for (const url of ['smtp://localhost:3146', 'smtp://LOCALHOST:3146', 'smtp://127.0.0.1:25'])
+      expect(requiresTls(url)).toBe(false)
+    for (const url of ['smtp://smtp.example.com:587', 'smtp://mailpit:1025', 'smtp://10.0.0.5'])
+      expect(requiresTls(url)).toBe(true)
   })
 })

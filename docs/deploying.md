@@ -14,16 +14,16 @@ The image runs the TypeScript source with Bun (no build step) as the unprivilege
 
 Set these on the container. `.env.example` describes every variable; `src/env.ts` validates them, and the server refuses to start when one is missing or wrong.
 
-| Variable             |                                                                                                                                                                                |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DATABASE_URL`       | Postgres connection URL                                                                                                                                                        |
-| `API_URL`            | The API's public URL, as browsers and auth callbacks reach it                                                                                                                  |
-| `APP_URL`            | The frontend's URL (CORS and auth trust this origin only)                                                                                                                      |
-| `BETTER_AUTH_SECRET` | 32+ random characters: `openssl rand -base64 32`. Keep it secret and stable: changing it signs everyone out                                                                    |
-| `SMTP_URL`           | The SMTP server for sign-in emails: `smtps://user:pass@host:465` or `smtp://user:pass@host:587`. Your mail host's SMTP, or one you run yourself. `smtp://` must offer STARTTLS |
-| `MAIL_FROM`          | The sender address; your SMTP server must be allowed to send as it (SPF, DKIM)                                                                                                 |
-| `TRUSTED_PROXY_HOPS` | `1` behind one load balancer or platform router, otherwise every client shares one rate limit                                                                                  |
-| `PORT`               | Defaults to 3141                                                                                                                                                               |
+| Variable             |                                                                                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`       | Postgres connection URL                                                                                                                                                                                                                          |
+| `API_URL`            | The API's public URL, as browsers and auth callbacks reach it                                                                                                                                                                                    |
+| `APP_URL`            | The frontend's URL (CORS and auth trust this origin only)                                                                                                                                                                                        |
+| `BETTER_AUTH_SECRET` | 32+ random characters: `openssl rand -base64 32`. Keep it secret and stable: changing it signs everyone out                                                                                                                                      |
+| `SMTP_URL`           | The SMTP server for sign-in emails: `smtps://user:pass@host:465` or `smtp://user:pass@host:587`. Your mail host's SMTP, or one you run yourself. `smtp://` must offer STARTTLS (`?requireTLS=false` turns that off: only on a network you trust) |
+| `MAIL_FROM`          | The sender address; your SMTP server must be allowed to send as it (SPF, DKIM)                                                                                                                                                                   |
+| `TRUSTED_PROXY_HOPS` | `1` behind one load balancer or platform router, otherwise every client shares one rate limit                                                                                                                                                    |
+| `PORT`               | Defaults to 3141                                                                                                                                                                                                                                 |
 
 ## Release
 

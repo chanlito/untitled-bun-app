@@ -22,7 +22,7 @@ export function createSmtpMailer({
   url,
   from,
   logger,
-  requireTLS = !LOOPBACK.has(new URL(url).hostname.toLowerCase()),
+  requireTLS = requiresTls(url),
 }: {
   url: string
   from: string
@@ -48,7 +48,9 @@ export function createSmtpMailer({
   }
 }
 
-const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]'])
+// STARTTLS is required unless the server is on this machine (Mailpit in development)
+export const requiresTls = (url: string) =>
+  !new Set(['localhost', '127.0.0.1', '[::1]']).has(new URL(url).hostname.toLowerCase())
 
 // Tests: keep every message so assertions can read codes and links
 export function createMemoryMailer() {
