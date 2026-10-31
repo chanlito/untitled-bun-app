@@ -1,9 +1,6 @@
 {
   "checks": ["bun run lint:check", "bun run fmt:check", "bun run typecheck", "bun test"],
   "commits": "gitmoji",
-  "branch": {
-    "pattern": "^((feat|fix|chore|docs|refactor|perf|test|build|ci)/[a-z0-9._-]+|claude/[A-Za-z0-9._/-]+)$"
-  },
   "tiers": {
     "high": [
       ".github/workflows/**",

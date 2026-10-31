@@ -38,7 +38,9 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 
 The project's name lives in `project.config.ts`. While `scripts/template/` exists (the template repo itself), its test fails if the template's name appears outside the files init renames; use `project.name` / `project.slug`.
 
-## Commits
+## Branches and commits
+
+Branches are named `<type>/<short-name>` after the work, like `feat/csv-export` or `fix/lint-recursion`, never `claude/*`.
 
 `<gitmoji> <type>(<scope>): <message>`, scope optional, e.g. `✨ feat(api): add tasks routes`, `🐛 fix: …`, `📝 docs: …`. Scopes are free-form.
 
