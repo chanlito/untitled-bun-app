@@ -3,7 +3,8 @@
 //   bun scripts/template/e2e.ts --keep    leave the project and its containers behind
 // Copies the tracked files into a fresh repo (what "Use this template" does), runs
 // `bun run setup` in it, and checks that the result is renamed, committed, clean, passes
-// `bun run verify`, builds the app, and serves the API with demo data and working sign-in.
+// `bun run verify`, builds the app, and serves the API with demo data, working sign-in and
+// the admin setup was given.
 // Lives in scripts/template/, so projects created from the template drop it on init.
 import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -19,6 +20,7 @@ const { values: args } = parseArgs({ options: { keep: { type: 'boolean' } } })
 
 const NAME = 'Acme'
 const SLUG = 'acme'
+const ADMIN = 'owner@acme.test'
 const failures: string[] = []
 let server: Bun.Subprocess | undefined
 
@@ -76,9 +78,10 @@ try {
   await git('remote', 'add', 'origin', `https://github.com/acme/${SLUG}.git`)
   console.log(`New project in ${dir}`)
 
-  // 2. First setup: renames, commits, installs, starts services, migrates, seeds
-  const first = await must(['bun', 'run', 'setup', '--name', NAME, '--yes'])
+  // 2. First setup: renames, commits, installs, starts services, migrates, seeds, makes the admin
+  const first = await must(['bun', 'run', 'setup', '--name', NAME, '--yes', '--admin-email', ADMIN])
   check(first.includes('Demo data loaded'), 'first setup loads demo data')
+  check(first.includes(`Admin ${ADMIN} created`), 'first setup creates the admin')
 
   const tracked = (await git('ls-files')).split('\n').filter(Boolean)
   const leftovers: string[] = []
@@ -107,7 +110,9 @@ try {
   // 3. Setup again: nothing to do
   const again = await must(['bun', 'run', 'setup'])
   check(
-    again.includes('.env.local up to date') && !again.includes('Demo data loaded'),
+    again.includes('.env.local up to date') &&
+      !again.includes('Demo data loaded') &&
+      again.includes(`Admin ${ADMIN} already an admin`),
     'second setup changes nothing',
   )
   check((await git('log', '--format=%s')).trim().split('\n').length === 2, 'no second commit')
@@ -144,24 +149,33 @@ try {
   const spec = (await (await fetch(`${api}/doc`)).json()) as { info: { title: string } }
   check(spec.info.title.includes(NAME), `API docs carry the name "${NAME}"`)
 
-  // Sign in as the demo user with a code from Mailpit, then read the demo tasks
-  const email = 'user@example.com'
+  // Sign in with a code from Mailpit: the demo user reads the demo tasks, and the admin
+  // setup made can list users through Better Auth's admin plugin
   const post = (path: string, body: object) =>
     fetch(`${api}/api/auth${path}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: env.get('APP_URL')! },
       body: JSON.stringify(body),
     })
-  const sent = await post('/email-otp/send-verification-otp', { email, type: 'sign-in' })
-  check(sent.ok, 'API sends a sign-in code')
-  const otp = await waitForCode(env.get('MAILPIT_URL')!, email)
-  check(Boolean(otp), 'sign-in code arrives in Mailpit')
-  const signIn = await post('/sign-in/email-otp', { email, otp })
-  const token = signIn.headers.get('set-auth-token')
-  check(signIn.ok && Boolean(token), 'demo user signs in')
-  const tasks = await fetch(`${api}/tasks`, { headers: { authorization: `Bearer ${token}` } })
+  const signIn = async (email: string, who: string) => {
+    const sent = await post('/email-otp/send-verification-otp', { email, type: 'sign-in' })
+    check(sent.ok, `API sends ${who} a sign-in code`)
+    const otp = await waitForCode(env.get('MAILPIT_URL')!, email)
+    check(Boolean(otp), `${who}'s sign-in code arrives in Mailpit`)
+    const res = await post('/sign-in/email-otp', { email, otp })
+    const token = res.headers.get('set-auth-token')
+    check(res.ok && Boolean(token), `${who} signs in`)
+    return { authorization: `Bearer ${token}` }
+  }
+  const tasks = await fetch(`${api}/tasks`, {
+    headers: await signIn('user@example.com', 'demo user'),
+  })
   const body = JSON.stringify(await tasks.json())
   check(tasks.ok && body.includes('Demo task 10'), 'demo user sees the demo tasks')
+  const listed = await fetch(`${api}/api/auth/admin/list-users`, {
+    headers: await signIn(ADMIN, 'the admin'),
+  })
+  check(listed.ok, 'the admin can use the admin API')
 } catch (err) {
   failures.push(String(err))
 } finally {

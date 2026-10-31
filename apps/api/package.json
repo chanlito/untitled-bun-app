@@ -10,7 +10,8 @@
     "start": "bun --env-file=../../.env.local src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun --env-file=../../.env.local src/db/migrate.ts",
-    "db:seed": "bun --env-file=../../.env.local src/db/seed.ts"
+    "db:seed": "bun --env-file=../../.env.local src/db/seed.ts",
+    "db:admin": "bun --env-file=../../.env.local src/db/create-admin.ts"
   },
   "dependencies": {
     "@better-auth/api-key": "1.7.14",

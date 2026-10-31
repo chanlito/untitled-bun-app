@@ -22,7 +22,8 @@
     "test": "bun test",
     "db:generate": "bun run --filter @untitled-bun-app/api db:generate",
     "db:migrate": "bun run --filter @untitled-bun-app/api db:migrate",
-    "db:seed": "bun run --filter @untitled-bun-app/api db:seed"
+    "db:seed": "bun run --filter @untitled-bun-app/api db:seed",
+    "db:admin": "bun run --filter @untitled-bun-app/api db:admin"
   },
   "devDependencies": {
     "@types/bun": "catalog:"
