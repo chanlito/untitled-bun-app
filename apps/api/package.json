@@ -1,0 +1,29 @@
+{
+  "name": "@repo/api",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/app.ts"
+  },
+  "scripts": {
+    "dev": "bun --env-file=../../.env.local --hot src/index.ts",
+    "start": "bun --env-file=../../.env.local src/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun --env-file=../../.env.local src/db/migrate.ts",
+    "db:seed": "bun --env-file=../../.env.local src/db/seed.ts"
+  },
+  "dependencies": {
+    "@better-auth/api-key": "1.7.14",
+    "@hono/zod-openapi": "catalog:",
+    "@scalar/hono-api-reference": "^0.12.17",
+    "better-auth": "1.7.14",
+    "drizzle-orm": "1.0.0-rc.5",
+    "hono": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.14",
+    "@types/bun": "catalog:",
+    "drizzle-kit": "1.0.0-rc.5"
+  }
+}
