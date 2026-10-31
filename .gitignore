@@ -9,6 +9,9 @@ dist/
 .env.local
 .env.*.local
 
+# browser automation output (Playwright MCP)
+.playwright-mcp/
+
 # misc
 *.log
 coverage/
