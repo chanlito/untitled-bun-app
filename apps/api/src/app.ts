@@ -46,7 +46,7 @@ export function createApp({
 }: AppOptions) {
   const auth = createAuth({ db, mailer })
   const services = createServices(db)
-  const readiness = createReadinessCheck(db)
+  const readiness = createReadinessCheck(db, { logger })
 
   const app = createRouter()
 
@@ -54,11 +54,12 @@ export function createApp({
   app.use(requestId({ generator: () => Bun.randomUUIDv7() }))
 
   // One line per request. The path only: query strings can carry tokens (magic links).
-  // Not for probes, which orchestrators send every few seconds: /ready logs its own failures.
+  // Probes, sent every few seconds, only when something unexpected happened: /ready logs
+  // why it answered 503 itself, once per check.
   app.use(async (c, next) => {
     const start = performance.now()
     await next()
-    if (PROBES.has(c.req.path)) return
+    if (PROBES.has(c.req.path) && (c.res.ok || c.res.status === 503)) return
     const fields = {
       requestId: c.var.requestId,
       method: c.req.method,
@@ -211,10 +212,7 @@ export function createApp({
     .get('/health', (c) => c.json({ ok: true }))
     .get('/ready', async (c) => {
       const result = await readiness()
-      if (result.ok) return c.json({ ok: true }, 200)
-      // The error stays in the log: a probe's caller only needs the reason
-      logger.warn({ reason: result.reason, err: result.error }, 'not ready')
-      return c.json({ ok: false, reason: result.reason }, 503)
+      return result.ok ? c.json(result, 200) : c.json(result, 503)
     })
     .route('/', tasksRouter)
 

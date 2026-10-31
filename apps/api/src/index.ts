@@ -1,6 +1,5 @@
 import { createApp, REQUEST_TIMEOUT_MS } from './app'
 import { createDb, migrateDb } from './db/client'
-import { pendingMigrations, shippedMigrations } from './db/readiness'
 import { env } from './env'
 import { createLogger } from './lib/logger'
 import { createMailpitMailer, unconfiguredMailer } from './lib/mailer'
@@ -18,14 +17,6 @@ const db = createDb(env.DATABASE_URL)
 if (env.MIGRATE_ON_START) {
   await migrateDb(db)
   logger.info('migrations applied')
-} else {
-  const pending = await pendingMigrations(db, shippedMigrations()).catch(() => [])
-  if (pending.length) {
-    logger.warn(
-      { pending },
-      'migrations pending: /ready answers 503 until `bun run db:migrate` runs',
-    )
-  }
 }
 
 const app = createApp({ db, mailer, logger })

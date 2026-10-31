@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test'
 
 import { config } from '@untitled-bun-app/config'
 import { sql } from 'drizzle-orm'
@@ -36,8 +36,8 @@ describe('app', () => {
     const res = await app.request('/ready')
     expect(res.status).toBe(503)
     expect(await res.json()).toEqual({ ok: false, reason: 'database unavailable' })
-    const line = logger.lines.find((l) => l.msg === 'not ready')
-    expect(line).toMatchObject({ level: 'warn', reason: 'database unavailable' })
+    const line = logger.lines.find((l) => l.msg === 'not ready: the database is unavailable')
+    expect(line).toMatchObject({ level: 'warn' })
     expect(line?.err).toBeDefined()
     expect(logger.lines.some((l) => l.msg === 'request')).toBe(false)
     expect((await app.request('/health')).status).toBe(200)
@@ -52,18 +52,20 @@ describe('app', () => {
     expect(await ahead()).toEqual({ ok: false, reason: 'migrations pending' })
   })
 
-  test('readiness asks the database at most once per cacheMs', async () => {
-    let asked = 0
-    const check = createReadinessCheck(t.db, {
-      cacheMs: 200,
-      migrations: () => (asked++, shippedMigrations()),
-    })
-    await Promise.all(Array.from({ length: 20 }, () => check()))
-    await check()
-    expect(asked).toBe(1)
-    await Bun.sleep(250)
-    await check()
-    expect(asked).toBe(2)
+  test('readiness runs one check at a time and reuses its answer for cacheMs', async () => {
+    const asked = spyOn(t.db, 'transaction')
+    try {
+      const cached = createReadinessCheck(t.db, { cacheMs: 60_000 })
+      await Promise.all(Array.from({ length: 20 }, () => cached()))
+      await cached()
+      expect(asked).toHaveBeenCalledTimes(1)
+      const uncached = createReadinessCheck(t.db, { cacheMs: 0 })
+      await uncached()
+      await uncached()
+      expect(asked).toHaveBeenCalledTimes(3)
+    } finally {
+      asked.mockRestore()
+    }
   })
 
   test('readiness says migrations are pending on a database never migrated', async () => {
