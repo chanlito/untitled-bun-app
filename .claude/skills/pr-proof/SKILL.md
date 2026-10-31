@@ -19,7 +19,7 @@ In the commands below, `$SKILL` is this skill's folder (for example `.claude/ski
 bun $SKILL/scripts/shots.ts <changed pages> --before main --mark '<what changed>'
 ```
 
-It builds the site when the build is older than the code, serves it on 127.0.0.1, and shoots each page in every language, light and dark, at 1280 and 375px. With `--before main` it also builds the latest `origin/main` in a git worktree and shoots the same pages there, and it says which pages are new.
+It builds the site when the build is older than the code, serves it on 127.0.0.1, and shoots each page in every language, light and dark, at 1280 and 375px. With `--before main` it also builds the latest `origin/main` in a git worktree and shoots the same pages there. That build is kept in `.checks/before-site/` until main moves, so shooting again is quick (`--build` rebuilds both). It says which pages are new, and warns when before and after are the same in every shot.
 
 - `--mark '<selector>'` says where the change is: it rings the element in every shot and puts before and after close-ups at the top of each sheet. Give `--mark` more than once for several things. When the element is new, the before close-up shows the same spot.
 - `--note '<what to look at>'` adds an arrow to the first mark with the note at its tail.
@@ -49,10 +49,10 @@ They land in `.checks/shots/` (which git ignores by itself). Open each one and l
 ## 4. Publish
 
 ```sh
-bun $SKILL/scripts/shots.ts <same arguments> --publish
+bun $SKILL/scripts/shots.ts --publish
 ```
 
-It pushes the sheets to the proof branch (`pr-proof` by default, made on first use with no history of its own) and prints Markdown image links for the PR's Evidence section. Put a line above each sheet saying what to look at. A private repo's images need the `proof.image` setting below.
+It pushes the last run's sheets, the ones you looked at, to the proof branch (`pr-proof` by default, made on first use with no history of its own) and prints Markdown image links for the PR's Evidence section. It warns when the code changed since they were shot. Put a line above each sheet saying what to look at. A private repo's images need the `proof.image` setting below.
 
 When the project has a preview deploy, its link goes at the very top of the PR too (the pr-writing skill does that).
 
@@ -60,19 +60,20 @@ When the project has a preview deploy, its link goes at the very top of the PR t
 
 Before calling the work done, ask what this change taught about proof:
 
-- **A bug got past the proof** (the review, the preview or a person found it): could a shot have shown it? Then change what you shoot next time (another width, `--click`, dark mode) and add a lesson saying so. If the project needs a new kind of page check, write it as the project's own script next to the code (the harness in `$SKILL/scripts/harness.ts` builds, serves and opens pages for it) and add it to `checks` in `show-your-work.json`.
+- **A bug got past the proof** (the review, the preview or a person found it): could a shot have shown it? Then change what you shoot next time (another width, `--click`, dark mode) and add a lesson saying so. If the project needs a new kind of page check, write it as the project's own script next to the code (the harness in `$SKILL/scripts/harness.ts` builds, serves and opens pages for it) and add it to `checks` in `skills.config.ts`.
 - **Something cost a retry or a workaround** the next agent will hit too: add a lesson with `bun $SKILL/scripts/lessons.ts add "<what to do>" --pr <number>`.
 - **A person corrected your proof:** add a lesson, in their words.
 - **A lesson is now handled by a setting, a check or a step, or turned out wrong:** `bun $SKILL/scripts/lessons.ts drop <n>`.
 
-Each lesson is one line about what to do. Where they're kept depends on `lessons` in `show-your-work.json`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). Don't edit this skill's own files for a project's lessons: an update replaces them. A fix that would help every project belongs upstream, in chanlito/skills.
+Each lesson is one line about what to do. Where they're kept depends on `lessons` in `skills.config.ts`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). Don't edit this skill's own files for a project's lessons: an update replaces them. A fix that would help every project belongs upstream, in chanlito/skills.
 
 ## Settings
 
-`show-your-work.json` at the repo root, all optional:
+`skills.config.ts` at the repo root, all optional:
 
 - `site.build`: the build command (`npm run build`), and `site.dist`: where it writes the pages (`dist`).
 - `site.sources`: what the build reads, to know when to rebuild.
+- `site.install`: installs dependencies in the before build's worktree. By default a workspace monorepo runs its lockfile's install (`bun install --frozen-lockfile`, `npm ci`, …), and anything else borrows this checkout's `node_modules`.
 - `site.pages`: what to shoot when no pages are named (`["/"]`).
 - `site.languages`: `{ "default": "en", "prefixed": ["fr", "de"] }` for pages at `/fr/…` and `/de/…`.
 - `site.fakes`: made-up answers for API calls, like `{ "/api/me": { "GET": { "name": "Ada" }, "*": { "ok": true } } }`.

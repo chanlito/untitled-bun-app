@@ -23,7 +23,9 @@ Start from an up-to-date base: `git fetch origin main && git switch -c <type>/<w
 bun $SKILL/scripts/check.ts
 ```
 
-It checks the branch name and the commit subjects against the project's format, runs the project's own checks (`checks` in `show-your-work.json`, such as format, type-check, tests and build), and prints the risk tier and the preview link. It must end with `✓ Ready to push.` When it fails, fix the cause and run it again. Don't push around it.
+It checks the branch name and the commit subjects against the project's format, runs the project's own checks (`checks` in `skills.config.ts`, such as format, type-check, tests and build), and prints the risk tier and the preview link. It must end with `✓ Ready to push.` When it fails, fix the cause and run it again. Don't push around it.
+
+The checks are slow, so a bad branch name or commit subject stops it before they run. Checks that already passed on the exact same code are skipped, so rewording a commit doesn't run them again. Files git ignores, like `.env` or what's inside `node_modules`, aren't part of that: after changing only those, use `--rerun`.
 
 ## 4. Get the tier and the proof
 
@@ -39,7 +41,7 @@ bun $SKILL/scripts/body.ts
 It prints the project's PR template (or this skill's `template.md` when there's none) with the preview link and the suggested tier filled in. Fill in the rest. Skip preambles and keep the prose short. Use the project's own words for things (its `GLOSSARY.md` if it has one), not names you made up while working. If the repo's template has other sections, fill them in too; don't drop them.
 
 - **Preview link at the very top**, and in your message about the PR too. People shouldn't have to look for it.
-- **Tier** with its one-line reason, and the label. Raise it if pr-risks says paths can't tell.
+- **Tier:** just the tier, like `**Tier:** High`. The label shows on the PR and the reason is in the config, so don't repeat them. Raise it if pr-risks says paths can't tell.
 - **Summary:** one or two sentences on what someone using it would notice, then the smallest picture that makes the point. Not a list of files.
 - **Evidence:** before and after.
 - **Merge danger:** the door and the blast radius.
@@ -83,16 +85,16 @@ A one-way door or a wide blast radius is a reason to raise the tier with pr-risk
 
 Before calling the work done, ask what this change taught, and fill in the PR's Skills line with it (or "nothing new"):
 
-- **A bug got past the checks** (the review, the preview or a person found it): make it a check. Add a script or test to the project, show it fails on the old code, and add it to `checks` in `show-your-work.json`. If that's too big for this PR, open an issue and add a lesson that links it.
+- **A bug got past the checks** (the review, the preview or a person found it): make it a check. Add a script or test to the project, show it fails on the old code, and add it to `checks` in `skills.config.ts`. If that's too big for this PR, open an issue and add a lesson that links it.
 - **Something cost a retry or a workaround** the next agent will hit too: add a lesson with `bun $SKILL/scripts/lessons.ts add "<what to do>" --pr <number>`.
 - **A person corrected how you work**, in a review or a message: add a lesson, in their words.
 - **A lesson is now handled by a check or a step, or turned out wrong:** `bun $SKILL/scripts/lessons.ts drop <n>`.
 
-Each lesson is one line about what to do, not the story of what went wrong. Where they're kept depends on `lessons` in `show-your-work.json`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). With `commit`, `check.ts` fails when a skill has more than `maxLessons` (12), so the oldest have to become a check or a step. Don't edit this skill's own files for a project's lessons: an update replaces them. A fix that would help every project belongs upstream, in chanlito/skills.
+Each lesson is one line about what to do, not the story of what went wrong. Where they're kept depends on `lessons` in `skills.config.ts`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). With `commit`, `check.ts` fails when a skill has more than `maxLessons` (12), so the oldest have to become a check or a step. Don't edit this skill's own files for a project's lessons: an update replaces them. A fix that would help every project belongs upstream, in chanlito/skills.
 
 ## Settings
 
-`show-your-work.json` at the repo root, all optional:
+`skills.config.ts` at the repo root, all optional:
 
 - `checks`: commands that must pass, in order, like `["npm run lint", "npm test", "npm run build"]`.
 - `base`: the branch to compare with (`origin/main`).

@@ -1,6 +1,7 @@
-// The project's settings for these skills, from show-your-work.json at the
-// root of the repo. Every field is optional; what's left out falls back to
-// the defaults below, which suit a plain web project with one language.
+// The project's settings for these skills, from skills.config.ts (or
+// skills.config.json) at the root of the repo. Every field is optional;
+// what's left out falls back to the defaults below, which suit a plain web
+// project with one language.
 //
 // This file is shared by every skill in chanlito/skills. Edit it in shared/
 // and run `bun run sync`, which copies it into each skill's scripts/.
@@ -32,12 +33,17 @@ export type Config = {
   /** The PR template to fill in. The skill's own is used when it's missing. */
   template: string;
   tiers: {
-    /** Paths (globs) that make a change High. */
+    /**
+     * Paths (globs) that make a change High. A project's lists add to the
+     * defaults below unless `defaults` is false.
+     */
     high: string[];
     /** Paths that make it at least Medium, even when they'd be Low. */
     medium: string[];
     /** Paths that are Low on their own. Anything else is Medium. */
     low: string[];
+    /** false to use only the project's own high, medium and low lists. */
+    defaults: boolean;
     /** Why each tier, in a few words, for the PR. */
     reasons: Record<Tier, string>;
     /** The reviews each tier gets, in order. */
@@ -52,6 +58,12 @@ export type Config = {
     dist: string;
     /** What the build reads: when one is newer than the build, it rebuilds. */
     sources: string[];
+    /**
+     * Installs dependencies for the before build, in its worktree. Empty:
+     * a workspace monorepo runs its lockfile's install, anything else
+     * borrows this checkout's node_modules.
+     */
+    install: string;
     /** The pages to shoot when none are named. */
     pages: string[];
     languages: {
@@ -113,15 +125,86 @@ export const DEFAULTS: Config = {
   template: '.github/pull_request_template.md',
   tiers: {
     high: [
+      // CI decides what gets merged and released.
       '.github/workflows/**',
-      '**/migrations/**',
-      '**/auth/**',
+      '.github/actions/**',
+      '.gitlab-ci.yml',
+      '.circleci/**',
+      'Jenkinsfile',
+      // How the app is built, hosted and run.
+      '**/Dockerfile',
+      '**/Dockerfile.*',
+      '**/docker-compose*.yml',
+      '**/compose*.yml',
       '**/*.tf',
-      'Dockerfile',
+      '**/*.tfvars',
+      'infra/**',
+      'k8s/**',
+      '**/helm/**',
+      'fly.toml',
+      'vercel.json',
+      'netlify.toml',
+      'wrangler.toml',
+      'wrangler.json*',
+      'Procfile',
+      // Secrets and runtime settings.
       '**/.env*',
+      // A bad migration or schema change can lose data.
+      '**/migrations/**',
+      '**/prisma/**',
+      '**/drizzle.config.*',
+      '**/*.sql',
+      // Who is signed in and what they can reach.
+      '**/auth/**',
+      '**/auth.*',
+      '**/permissions/**',
+      '**/permissions.*',
+      // Dependencies and tooling change what code runs everywhere.
+      '**/package.json',
+      '**/package-lock.json',
+      '**/bun.lock',
+      '**/bun.lockb',
+      '**/bunfig.toml',
+      '**/yarn.lock',
+      '**/pnpm-lock.yaml',
+      '**/pnpm-workspace.yaml',
+      '**/.npmrc',
+      '**/go.mod',
+      '**/go.sum',
+      '**/Cargo.toml',
+      '**/Cargo.lock',
+      '**/pyproject.toml',
+      '**/requirements*.txt',
+      '**/poetry.lock',
+      '**/uv.lock',
+      '**/Gemfile',
+      '**/Gemfile.lock',
+      // The skills run commands, and their config decides what they check.
+      'skills.config.*',
+      'show-your-work.json',
+      'skills-lock.json',
+      '.claude/skills/**',
+      '.agents/skills/**',
+      // Agent hooks and permissions run commands on every session.
+      '.claude/settings*.json',
     ],
-    medium: ['AGENTS.md', 'CLAUDE.md', '.claude/**', '.agents/**'],
-    low: ['**/*.md', '**/*.mdx', 'docs/**'],
+    medium: [
+      // Instructions agents follow on every change: never Low.
+      '**/AGENTS.md',
+      '**/CLAUDE.md',
+      '.claude/**',
+      '.agents/**',
+      '.cursor/**',
+      '.github/copilot-instructions.md',
+    ],
+    low: [
+      // Docs and content only: nothing runs differently.
+      '**/*.md',
+      '**/*.mdx',
+      'docs/**',
+      'LICENSE*',
+    ],
+    defaults: true,
     reasons: {
       High: 'touches deploy, CI, data or sign-in',
       Medium: 'changes how the project looks or works',
@@ -129,10 +212,12 @@ export const DEFAULTS: Config = {
     },
     reviews: {
       Low: [],
-      Medium: ['code review (/code-review medium), up to 2 rounds'],
+      Medium: [
+        'code review (/code-review medium), up to 2 rounds, a new one only after code fixes',
+      ],
       High: [
-        'code review (/code-review high), up to 3 rounds',
-        'security review (/security-review)',
+        'code review (/code-review high), up to 3 rounds, a new one only after code fixes',
+        'security review (/security-review) of the files that made it High',
         'a person reads the diff',
       ],
     },
@@ -149,6 +234,7 @@ export const DEFAULTS: Config = {
       'bun.lock',
       'pnpm-lock.yaml',
     ],
+    install: '',
     pages: ['/'],
     languages: { default: 'en', prefixed: [] },
     fakes: {},
@@ -183,7 +269,16 @@ export const DEFAULTS: Config = {
   },
 };
 
-export const CONFIG_FILE = 'show-your-work.json';
+export const CONFIG_FILE = 'skills.config.ts';
+/**
+ * Where the settings are read from, first found wins: TypeScript (so it can
+ * have comments), JSON, and the file's old name.
+ */
+export const CONFIG_FILES = [
+  CONFIG_FILE,
+  'skills.config.json',
+  'show-your-work.json',
+];
 
 type Plain = Record<string, unknown>;
 const isPlain = (v: unknown): v is Plain =>
@@ -206,15 +301,29 @@ export function root() {
   return top || process.cwd();
 }
 
+/** A .ts config's default export (bun runs it as is), or a .json's contents. */
+function load(file: string): unknown {
+  if (file.endsWith('.json')) return JSON.parse(readFileSync(file, 'utf8'));
+  const mod = require(file);
+  return mod?.default ?? mod;
+}
+
 let cached: Config | undefined;
 export function config(): Config {
   if (cached) return cached;
-  const file = join(root(), CONFIG_FILE);
-  const mine = existsSync(file)
-    ? JSON.parse(readFileSync(file, 'utf8'))
-    : undefined;
+  const file = CONFIG_FILES.map((name) => join(root(), name)).find((path) =>
+    existsSync(path),
+  );
+  const mine = file ? load(file) : undefined;
   if (isPlain(mine)) delete mine.$schema;
-  return (cached = merge(DEFAULTS, mine));
+  const merged = merge(DEFAULTS, mine);
+  // A project's tier lists add to the defaults, so it only names its own
+  // paths, unless it turns the defaults off.
+  const t = merged.tiers;
+  if (t.defaults)
+    for (const k of ['high', 'medium', 'low'] as const)
+      t[k] = [...new Set([...DEFAULTS.tiers[k], ...t[k]])];
+  return (cached = merged);
 }
 
 /** Every language the site has, the unprefixed one first. */

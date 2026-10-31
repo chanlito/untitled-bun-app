@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config, root } from './config';
 import { previewUrl } from './git';
-import { summary, tier } from './tier';
+import { tier } from './tier';
 
 const mine = join(root(), config().template);
 const template = readFileSync(
@@ -22,7 +22,8 @@ const template = readFileSync(
   'utf8',
 );
 const preview = previewUrl();
-const t = summary(tier().tier);
+// Only the tier: the label shows on the PR, and the reason is in the config.
+const t = tier().tier;
 
 let body = template
   .replaceAll('{{preview}}', preview)

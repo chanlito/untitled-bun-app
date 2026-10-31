@@ -76,7 +76,7 @@ Branches are named `<type>/<short-name>` after the work, like `feat/csv-export` 
 
 Every change goes through the **pr-writing** and **pr-risks** skills (in `.claude/skills/`) before its PR: `bun .claude/skills/pr-writing/scripts/check.ts` must end with `✓ Ready to push.`, and the PR body comes from `bun .claude/skills/pr-writing/scripts/body.ts`. **pr-proof** (screenshots) is installed but skipped for now: the app is a placeholder, so there is no `site` block in the settings yet.
 
-- Settings live in `show-your-work.json`: the checks above, gitmoji commits, and the paths that make a change High risk (CI, deps and tooling config, migrations and schema, env, auth, CORS, mail, and the vendored skills themselves, since their scripts run commands).
+- Settings live in `skills.config.ts`: the checks above, gitmoji commits, and the paths specific to this project that make a change High risk, each with a comment saying why. The skills' defaults already cover CI, Docker, env files, migrations, auth, dependencies and the skills themselves.
 - Lessons are committed in `.agents/lessons/`, so cloud agents starting from a fresh clone see them.
 - The skills are vendored by `npx skills add chanlito/skills` (recorded in `skills-lock.json`, which holds a content hash, not a version); update them with `npx skills update`, review the diff, and never edit them by hand. Lint and format skip them (`ignorePatterns` in `bunfig.toml`).
 
