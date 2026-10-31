@@ -4,7 +4,8 @@ export interface Mailer {
   send(mail: Mail): Promise<void>
 }
 
-// Development: deliver to Mailpit's HTTP API and echo to the console
+// Development only: delivers to Mailpit and echoes to the console, sign-in codes included
+// (index.ts never picks this mailer in production)
 export function createMailpitMailer({ url, from }: { url: string; from: string }): Mailer {
   return {
     async send(mail) {
@@ -23,6 +24,11 @@ export function createMailpitMailer({ url, from }: { url: string; from: string }
       if (!res.ok) console.error(`[mail] Mailpit rejected the message: ${res.status}`)
     },
   }
+}
+
+// Production placeholder: fails loudly until a real provider (e.g. Resend) is wired in
+export const unconfiguredMailer: Mailer = {
+  send: () => Promise.reject(new Error('No mail provider is configured for production')),
 }
 
 // Tests: keep every message so assertions can read codes and links

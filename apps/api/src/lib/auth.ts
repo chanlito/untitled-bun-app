@@ -20,6 +20,8 @@ export function createAuth({ db, mailer }: { db: Db; mailer: Mailer }) {
     basePath: '/api/auth',
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: [env.APP_URL],
+    // Explicit, so dev is protected too (Better Auth's default is production only)
+    rateLimit: { enabled: env.NODE_ENV !== 'test' },
     database: drizzleAdapter(db, { provider: 'pg', schema }),
     // Table names follow our convention: lowercase plurals
     user: { modelName: 'users' },
