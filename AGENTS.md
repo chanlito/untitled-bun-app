@@ -42,6 +42,14 @@ The project's name lives in `project.config.ts`. While `scripts/template/` exist
 
 `<gitmoji> <type>(<scope>): <message>`, scope optional, e.g. `✨ feat(api): add tasks routes`, `🐛 fix: …`, `📝 docs: …`. Scopes are free-form.
 
+## Pull requests
+
+Every change goes through the **pr-writing** and **pr-risks** skills (in `.claude/skills/`) before its PR: `bun .claude/skills/pr-writing/scripts/check.ts` must end with `✓ Ready to push.`, and the PR body comes from `bun .claude/skills/pr-writing/scripts/body.ts`. Changes with a screen also go through **pr-proof** (not set up yet: the app has no production build).
+
+- Settings live in `show-your-work.json`: the checks above, gitmoji commits, and the paths that make a change High risk (CI, migrations and schema, env, auth, mail).
+- Lessons are committed in `.agents/lessons/`, so cloud agents starting from a fresh clone see them.
+- The skills are vendored by `npx skills add chanlito/skills` (recorded in `skills-lock.json`, which holds a content hash, not a version); update them with `npx skills update`, review the diff, and never edit them by hand. Lint and format skip them (`.eslintignore`, `.prettierignore`).
+
 ## Agent skills
 
 ### Issue tracker

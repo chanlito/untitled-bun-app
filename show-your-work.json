@@ -1,0 +1,32 @@
+{
+  "checks": ["bun run lint:check", "bun run fmt:check", "bun run typecheck", "bun test"],
+  "commits": "gitmoji",
+  "branch": {
+    "pattern": "^((feat|fix|chore|docs|refactor|perf|test|build|ci)/[a-z0-9._-]+|claude/[A-Za-z0-9._/-]+)$"
+  },
+  "tiers": {
+    "high": [
+      ".github/workflows/**",
+      "**/Dockerfile",
+      "docker-compose.yml",
+      "**/.env*",
+      "apps/api/drizzle/**",
+      "apps/api/src/db/schema/**",
+      "apps/api/src/db/migrate.ts",
+      "apps/api/src/env.ts",
+      "apps/api/src/lib/auth.ts",
+      "apps/api/src/lib/require-user.ts",
+      "apps/api/src/lib/mailer.ts",
+      "package.json",
+      "bun.lock",
+      "bunfig.toml",
+      "scripts/**",
+      "apps/api/drizzle.config.ts",
+      "show-your-work.json",
+      ".eslintignore",
+      ".prettierignore"
+    ],
+    "medium": ["AGENTS.md", "CLAUDE.md", ".claude/**", ".agents/**", "skills-lock.json"]
+  },
+  "lessons": "commit"
+}
