@@ -21,8 +21,6 @@ const Env = z.object({
     .transform((url) => new URL(url).origin),
   DATABASE_URL: z.url().default('postgres://app:app@localhost:3143/app'),
   BETTER_AUTH_SECRET: z.string().min(32),
-  // The first admin, made by `bun run db:admin` (setup asks for it); empty for none
-  ADMIN_EMAIL: z.email().or(z.literal('')).optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   // Development mail catcher; when unset, sending mail fails until a provider is wired in

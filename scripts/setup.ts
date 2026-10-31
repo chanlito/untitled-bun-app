@@ -38,7 +38,7 @@ const { values: args } = parseArgs({
 })
 
 const MIN_BUN = '1.4.4'
-// A sanity check before saving it; the API validates it properly (ADMIN_EMAIL in env.ts)
+// A first check of --admin-email and the prompt; `db:admin` validates it properly
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const worktree = await isWorktree()
 
@@ -102,9 +102,6 @@ if (init?.github.clientId) {
 }
 if (freshEnv && worktree) Object.assign(updates, await worktreeEnv(env))
 const adminEmail = await chooseAdmin(env)
-if (adminEmail !== undefined && adminEmail !== env.get('ADMIN_EMAIL')) {
-  updates.ADMIN_EMAIL = adminEmail
-}
 if (Object.keys(updates).length) await setEnv(envLocalPath, updates)
 step(freshEnv ? '.env.local created' : '.env.local up to date')
 
@@ -128,15 +125,22 @@ if (seed) {
 }
 
 if (adminEmail) {
-  // Passed explicitly: this process loaded .env.local before it changed, and an inherited
-  // variable would win over the child's --env-file
-  const out = await $`bun run db:admin`
+  // .env.local passed explicitly: this process loaded it before setup changed it, and an
+  // inherited variable would win over the child's --env-file
+  const res = await $`bun run db:admin`
     .cwd(root)
-    .env({ ...process.env, ADMIN_EMAIL: adminEmail })
+    .env({ ...process.env, ...Object.fromEntries(vars), ADMIN_EMAIL: adminEmail })
     .quiet()
-    .text()
+    .nothrow()
   // --filter prefixes each line with the package name and adds an "Exited" line
-  step(out.match(/Admin \S+ .*/)?.[0] ?? `Admin ${adminEmail} ready`)
+  const out = res.stdout.toString().replaceAll(/^\S+ db:admin: /gm, '')
+  if (res.exitCode !== 0) fail(out.split('\n').find((l) => l.startsWith('ADMIN_EMAIL')) ?? out)
+  // Saved only once it worked, so a bad address is never kept
+  if (adminEmail !== vars.get('ADMIN_EMAIL'))
+    await setEnv(envLocalPath, { ADMIN_EMAIL: adminEmail })
+  step(out.match(/^Admin \S+ .*/m)?.[0] ?? `Admin ${adminEmail} ready`)
+} else if (adminEmail === '' && !vars.has('ADMIN_EMAIL')) {
+  await setEnv(envLocalPath, { ADMIN_EMAIL: '' })
 }
 
 const apiUrl = vars.get('API_URL')

@@ -34,7 +34,8 @@ export async function readEnv(path: string) {
   if (!existsSync(path)) return vars
   for (const line of (await Bun.file(path).text()).split('\n')) {
     const match = line.match(/^([A-Z0-9_]+)=(.*)$/)
-    if (match) vars.set(match[1]!, match[2]!)
+    // Matching quotes around a value are dotenv syntax, not part of it
+    if (match) vars.set(match[1]!, match[2]!.replace(/^(['"])(.*)\1$/, '$2'))
   }
   return vars
 }

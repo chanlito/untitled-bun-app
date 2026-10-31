@@ -7,7 +7,9 @@ export type EnsureAdminResult = 'created' | 'promoted' | 'unchanged'
 // the admin role to an existing one. Never removes a role, so it is safe to repeat.
 export async function ensureAdmin(auth: Auth, email: string): Promise<EnsureAdminResult> {
   const { internalAdapter } = await auth.$context
-  const existing = await internalAdapter.findUserByEmail(email.toLowerCase())
+  // Better Auth stores emails lowercased
+  email = email.toLowerCase()
+  const existing = await internalAdapter.findUserByEmail(email)
   if (!existing) {
     // Called without headers, so the plugin treats it as trusted server code
     await auth.api.createUser({ body: { email, name: email.split('@')[0]!, role: 'admin' } })
