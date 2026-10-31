@@ -46,6 +46,8 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 
 The project's name lives in `project.config.ts`. While `scripts/template/` exists (the template repo itself), its test fails if the template's name appears outside the files init renames; use `project.name` / `project.slug`.
 
+`bun scripts/template/e2e.ts` makes a new project from the template in a temp folder, runs `bun run setup` in it, then checks the rename and init commit, a second setup changing nothing, `bun run verify`, and the API with demo data and sign-in through Mailpit. The **Template** workflow runs it in CI; run it yourself after touching setup or init (it needs Docker and ports 3141-3145 free). Init deletes `scripts/template/` and `.github/workflows/template.yml`, so nothing outside them may import from `scripts/template/`.
+
 ## Branches and commits
 
 Branches are named `<type>/<short-name>` after the work, like `feat/csv-export` or `fix/lint-recursion`, never `claude/*`.
