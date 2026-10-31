@@ -3,6 +3,7 @@ import { project } from '@project'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { admin, bearer, emailOTP, jwt, magicLink, openAPI } from 'better-auth/plugins'
+
 import type { Db } from '../db/client'
 import * as schema from '../db/schema'
 import { env } from '../env'

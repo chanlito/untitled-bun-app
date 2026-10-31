@@ -1,4 +1,5 @@
 import { project } from '@project'
+
 import { api } from './api'
 
 document.title = project.name

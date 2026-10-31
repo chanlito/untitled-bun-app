@@ -1,5 +1,6 @@
 // Runs before `bun run dev`: fail fast with one line telling you what to do
 import { existsSync } from 'node:fs'
+
 import { envLocalPath, fail, migrationStatus, readEnv } from './lib'
 
 if (!existsSync(envLocalPath)) fail("Setup hasn't been run in this checkout. Run: bun run setup")

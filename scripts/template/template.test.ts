@@ -1,7 +1,9 @@
 // Keeps the template renameable: its name may only appear where init rewrites it.
 // Lives in scripts/template/, so projects created from the template drop it on init.
 import { describe, expect, test } from 'bun:test'
+
 import { $ } from 'bun'
+
 import { root } from '../lib'
 import { isTemplateRemote, RENAMED_FILES, slugify } from './init'
 

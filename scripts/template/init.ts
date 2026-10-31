@@ -2,7 +2,9 @@
 // scripts/template/ exists; init deletes the folder, so it can never run twice.
 import { rmSync } from 'node:fs'
 import { basename } from 'node:path'
+
 import { $ } from 'bun'
+
 import { fail, root, step } from '../lib'
 
 export const TEMPLATE = {
