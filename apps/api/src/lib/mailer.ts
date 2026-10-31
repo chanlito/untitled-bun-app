@@ -14,8 +14,10 @@ export interface Mailer {
 
 // Any SMTP server: Mailpit in development (docker-compose.yml), and in production your mail
 // host's SMTP or one you run yourself. `url` is a connection URL, credentials included:
-// smtp://user:pass@host:587 (STARTTLS when offered), smtps://user:pass@host:465 (TLS).
-// Connections are pooled. A failed send rejects, so the request that sent it fails loudly.
+// smtps://user:pass@host:465 (TLS from the start) or smtp://user:pass@host:587 (STARTTLS,
+// required so credentials and codes never cross the network in the clear; only a server on
+// this machine, like Mailpit, may skip it). Connections are pooled. A failed send rejects,
+// so the request that sent it fails loudly.
 export function createSmtpMailer({
   url,
   from,
@@ -25,7 +27,11 @@ export function createSmtpMailer({
   from: string
   logger: Logger
 }): Mailer {
-  const transport = nodemailer.createTransport(withPool(url))
+  const transport = nodemailer.createTransport({
+    url,
+    pool: true,
+    requireTLS: !LOOPBACK.has(new URL(url).hostname),
+  })
   return {
     async send(mail) {
       // Not the address or the body: they hold personal data and sign-in codes
@@ -43,17 +49,7 @@ export function createSmtpMailer({
   }
 }
 
-// nodemailer reads options from the URL's query: pooling unless the URL says otherwise
-function withPool(url: string) {
-  const parsed = new URL(url)
-  if (!parsed.searchParams.has('pool')) parsed.searchParams.set('pool', 'true')
-  return parsed.toString()
-}
-
-// Production without SMTP_URL: fails loudly instead of pretending to send
-export const unconfiguredMailer: Mailer = {
-  send: () => Promise.reject(new Error('No mail server is configured: set SMTP_URL')),
-}
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]'])
 
 // Tests: keep every message so assertions can read codes and links
 export function createMemoryMailer() {

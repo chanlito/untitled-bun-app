@@ -12,3 +12,15 @@ const { pending } = await migrationStatus(databaseUrl!).catch(() =>
   fail("Can't reach the database. Run: bun run setup"),
 )
 if (pending.length) fail(`Migrations are behind (${pending.length} pending). Run: bun run setup`)
+
+// Mail goes to Mailpit over SMTP: a container started before its SMTP port was published
+// would refuse every sign-in email
+const smtp = new URL((await readEnv(envLocalPath)).get('SMTP_URL') ?? 'smtp://localhost:3146')
+if (['localhost', '127.0.0.1'].includes(smtp.hostname)) {
+  const socket = await Bun.connect({
+    hostname: smtp.hostname,
+    port: Number(smtp.port || 25),
+    socket: { data() {} },
+  }).catch(() => fail("Can't reach Mailpit's SMTP port. Run: bun run setup"))
+  socket.end()
+}

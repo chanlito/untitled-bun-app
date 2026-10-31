@@ -3,7 +3,7 @@ import { createDb, migrateDb } from './db/client'
 import { env } from './env'
 import { createShutdown } from './lib/graceful-shutdown'
 import { createLogger, type Logger } from './lib/logger'
-import { createSmtpMailer, unconfiguredMailer } from './lib/mailer'
+import { createSmtpMailer, type Mailer } from './lib/mailer'
 
 const logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT })
 
@@ -13,7 +13,12 @@ const logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT })
 // join the shutdown already running (`bun run` forwards Ctrl-C, so one press arrives twice),
 // which SHUTDOWN_DELAY_MS + SHUTDOWN_GRACE_MS bound. `bun --hot` runs this file again on each
 // change, so the handlers are added once and use the latest run's shutdown and logger.
-type Running = { shutdown?: (reason: string) => Promise<void>; logger?: Logger; listening?: true }
+type Running = {
+  shutdown?: (reason: string) => Promise<void>
+  logger?: Logger
+  mailer?: Mailer
+  listening?: true
+}
 const running = ((globalThis as { __api?: Running }).__api ??= {})
 running.shutdown = undefined
 running.logger = logger
@@ -33,10 +38,13 @@ if (!running.listening) {
   }
 }
 
-const mailer = env.SMTP_URL
-  ? createSmtpMailer({ url: env.SMTP_URL, from: env.MAIL_FROM, logger })
-  : unconfiguredMailer
-if (!env.SMTP_URL) logger.warn('SMTP_URL is not set: sign-in emails will fail')
+// A `bun --hot` re-run closes the previous run's connection pool before opening its own
+running.mailer?.close?.()
+const mailer = (running.mailer = createSmtpMailer({
+  url: env.SMTP_URL,
+  from: env.MAIL_FROM,
+  logger,
+}))
 void mailer.verify?.()
 
 const db = createDb(env.DATABASE_URL)

@@ -7,6 +7,8 @@ const urls = {
   API_URL: 'https://api.example.com',
   APP_URL: 'https://app.example.com/',
   DATABASE_URL: 'postgres://u:p@db.example.com/app',
+  SMTP_URL: 'smtps://user:pass@smtp.example.com:465',
+  MAIL_FROM: 'no-reply@app.example.com',
 }
 
 describe('parseEnv', () => {
@@ -42,17 +44,10 @@ describe('parseEnv', () => {
     expect(parseEnv({ ...secret, MIGRATE_ON_START: 'maybe' }).success).toBe(false)
   })
 
-  test('SMTP_URL: Mailpit outside production, unset in production unless given', () => {
-    const smtp = (source: Record<string, string>) => {
-      const result = parseEnv({ ...secret, ...urls, ...source })
-      if (!result.success) throw new Error(result.error)
-      return result.data.SMTP_URL
-    }
-    expect(smtp({})).toBe('smtp://localhost:3146')
-    expect(smtp({ NODE_ENV: 'production' })).toBeUndefined()
-    expect(smtp({ NODE_ENV: 'production', SMTP_URL: '' })).toBeUndefined()
-    const url = 'smtps://user:pass@smtp.example.com:465'
-    expect(smtp({ NODE_ENV: 'production', SMTP_URL: url })).toBe(url)
+  test('SMTP_URL: Mailpit outside production, and only smtp:// or smtps://', () => {
+    const result = parseEnv({ ...secret })
+    if (!result.success) throw new Error(result.error)
+    expect(result.data.SMTP_URL).toBe('smtp://localhost:3146')
     expect(parseEnv({ ...secret, SMTP_URL: 'https://smtp.example.com' }).success).toBe(false)
   })
 

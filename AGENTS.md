@@ -41,7 +41,7 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 - Prefer a well-maintained library over hand-written infrastructure (pino for logs, hono-rate-limiter, ipaddr.js); write our own only for glue.
 - `app.ts` sets, in order: request id, request log, secure headers, CORS, the client IP, a per-IP rate limit (hono-rate-limiter) on everything but `/health` and `/api/auth/*` (Better Auth limits those itself), a 1 MiB body limit (413) and a 30 s timeout (504).
 - The client IP comes from `src/lib/client-ip.ts`: the socket address, or X-Forwarded-For only as far as `TRUSTED_PROXY_HOPS`. Better Auth gets it as `x-client-ip`; don't point it back at X-Forwarded-For.
-- Production refuses to start without `API_URL`, `APP_URL` and `DATABASE_URL` (`parseEnv` in `src/env.ts`).
+- Production refuses to start without `API_URL`, `APP_URL`, `DATABASE_URL`, `SMTP_URL` and `MAIL_FROM` (`parseEnv` in `src/env.ts`).
 - Mail goes over SMTP (nodemailer, `src/lib/mailer.ts`) to `SMTP_URL`: Mailpit in development, any SMTP server in production, so no mail provider's API or account is needed. Never log addresses, subjects or bodies: they carry sign-in codes.
 - `/health` is liveness (no dependencies), `/ready` is readiness: 503 until the database answers and has every migration in `apps/api/drizzle/` (`src/db/readiness.ts`). Add a dependency the API can't serve without to `/ready`, never to `/health`.
 - Production doesn't migrate on boot, so replicas never race: `bun run db:migrate` runs once per release, before the new version takes traffic (it works with plain env too: the missing `.env.local` is skipped). `MIGRATE_ON_START=true` brings boot migrations back for a single instance. Write migrations the version still running can live with.

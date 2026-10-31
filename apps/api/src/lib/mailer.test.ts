@@ -3,12 +3,16 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { SMTPServer } from 'smtp-server'
 
 import { createMemoryLogger } from './logger'
-import { createSmtpMailer, unconfiguredMailer } from './mailer'
+import { createSmtpMailer } from './mailer'
 
 type Received = { from: string; to: string[]; raw: string }
 
 let server: SMTPServer | undefined
-afterEach(() => new Promise<void>((done) => (server ? server.close(() => done()) : done())))
+afterEach(async () => {
+  const closing = server
+  server = undefined
+  if (closing) await new Promise<void>((done) => closing.close(() => done()))
+})
 
 // A real SMTP server on a free port, like Mailpit or a mail host; `reject` refuses every message
 async function startSmtp({ reject = false } = {}) {
@@ -31,7 +35,7 @@ async function startSmtp({ reject = false } = {}) {
       })
     },
   })
-  await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve))
+  await new Promise<void>((resolve) => server!.listen(0, '0.0.0.0', resolve))
   const { port } = server.server.address() as { port: number }
   return { url: `smtp://127.0.0.1:${port}`, received }
 }
@@ -80,9 +84,18 @@ describe('SMTP mailer', () => {
     )
   })
 
-  test('without SMTP_URL, every send fails', async () => {
-    await expect(
-      unconfiguredMailer.send({ to: 'a@example.com', subject: 's', text: 't' }),
-    ).rejects.toThrow('set SMTP_URL')
+  test('outside this machine, smtp:// refuses to send without STARTTLS', async () => {
+    // The server offers no STARTTLS, as when an attacker strips it from the reply
+    const { url, received } = await startSmtp()
+    const remote = url.replace('127.0.0.1', '127.0.0.2')
+    const mailer = createSmtpMailer({
+      url: remote,
+      from: 'a@example.com',
+      logger: createMemoryLogger(),
+    })
+    const sent = mailer.send({ to: 'ada@example.com', subject: 's', text: 't' })
+    await expect(sent).rejects.toThrow(/STARTTLS/)
+    mailer.close?.()
+    expect(received).toHaveLength(0)
   })
 })
