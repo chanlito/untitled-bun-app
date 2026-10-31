@@ -21,7 +21,7 @@ Bun + Hono API template in a Bun workspaces monorepo. Scripts live in the root `
 - `bun run setup` then `bun run dev`. Setup is safe to repeat. In a git worktree it writes that worktree's own database and ports to `.env.local`, so read URLs from there, not from the defaults.
 - CI runs format, type check and tests on the Bun in `.bun-version`, and lint on canary. Locally, Bun **canary** is required: `bun lint` is not in a stable release yet (on stable Bun it fails with `Script not found "lint"`).
 - `bun test` needs nothing running: tests use an in-process PGlite copy of the migrated schema.
-- To sign in by hand in dev, request a code (`POST /api/auth/email-otp/send-verification-otp`) and read it from Mailpit's `GET http://localhost:3145/api/v1/message/latest` or the API's console.
+- To sign in by hand in dev, request a code (`POST /api/auth/email-otp/send-verification-otp`) and read it from Mailpit's `GET http://localhost:3145/api/v1/message/latest` (the API sends mail over SMTP to Mailpit in development; codes never go to the console).
 - Done means `bun run verify` passes: `bun lint --max-warnings 0`, `bun fmt --check`, `bun run typecheck` and `bun test`. CI runs exactly these.
 
 ## Layering (apps/api)
@@ -41,7 +41,8 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 - Prefer a well-maintained library over hand-written infrastructure (pino for logs, hono-rate-limiter, ipaddr.js); write our own only for glue.
 - `app.ts` sets, in order: request id, request log, secure headers, CORS, the client IP, a per-IP rate limit (hono-rate-limiter) on everything but `/health` and `/api/auth/*` (Better Auth limits those itself), a 1 MiB body limit (413) and a 30 s timeout (504).
 - The client IP comes from `src/lib/client-ip.ts`: the socket address, or X-Forwarded-For only as far as `TRUSTED_PROXY_HOPS`. Better Auth gets it as `x-client-ip`; don't point it back at X-Forwarded-For.
-- Production refuses to start without `API_URL`, `APP_URL` and `DATABASE_URL` (`parseEnv` in `src/env.ts`).
+- Production refuses to start without `API_URL`, `APP_URL`, `DATABASE_URL`, `SMTP_URL` and `MAIL_FROM` (`parseEnv` in `src/env.ts`).
+- Mail goes over SMTP (nodemailer, `src/lib/mailer.ts`) to `SMTP_URL`: Mailpit in development, any SMTP server in production, so no mail provider's API or account is needed. Never log addresses, subjects or bodies: they carry sign-in codes.
 - `/health` is liveness (no dependencies), `/ready` is readiness: 503 until the database answers and has every migration in `apps/api/drizzle/` (`src/db/readiness.ts`). Add a dependency the API can't serve without to `/ready`, never to `/health`.
 - Production doesn't migrate on boot, so replicas never race: `bun run db:migrate` runs once per release, before the new version takes traffic (it works with plain env too: the missing `.env.local` is skipped). `MIGRATE_ON_START=true` brings boot migrations back for a single instance. Write migrations the version still running can live with.
 - The production image is the root `Dockerfile` (CI builds it and runs it against Postgres); `docs/deploying.md` covers release and runtime. Keep its `ARG BUN_VERSION` equal to `.bun-version`. `bun run start` runs the same server without Docker.
@@ -64,7 +65,7 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 
 The project's name lives in `packages/config/project.config.ts`. While `scripts/template/` exists (the template repo itself), its test fails if the template's name appears outside the files init renames; use `config.name` / `config.slug`.
 
-`bun scripts/template/e2e.ts` makes a new project from the template in a temp folder, runs `bun run setup` in it, then checks the rename and init commit, a second setup changing nothing, `bun run verify`, the app build, and the API with demo data and sign-in through Mailpit. The **Template** workflow runs it in CI; run it yourself after touching setup or init (it needs Docker and ports 3141-3145 free). Init deletes `scripts/template/` and `.github/workflows/template.yml`, so nothing outside them may import from `scripts/template/`.
+`bun scripts/template/e2e.ts` makes a new project from the template in a temp folder, runs `bun run setup` in it, then checks the rename and init commit, a second setup changing nothing, `bun run verify`, the app build, and the API with demo data and sign-in through Mailpit. The **Template** workflow runs it in CI; run it yourself after touching setup or init (it needs Docker and ports 3141-3146 free). Init deletes `scripts/template/` and `.github/workflows/template.yml`, so nothing outside them may import from `scripts/template/`.
 
 ## README
 

@@ -6,9 +6,19 @@ const NODE_ENV = z.enum(['development', 'test', 'production']).default('developm
 // (setup generates one into .env.local), so a deploy that forgets it fails to start.
 const TEST_SECRET = 'test-only-secret-never-used-outside-bun-test'
 
-// The localhost defaults suit development only: production must name them, so a
-// deploy that forgets one fails to start instead of pointing at localhost
-const REQUIRED_IN_PRODUCTION = ['API_URL', 'APP_URL', 'DATABASE_URL'] as const
+// The localhost and example defaults suit development only: production must name them, so a
+// deploy that forgets one fails to start instead of pointing at localhost or sending mail
+// nobody can receive
+const REQUIRED_IN_PRODUCTION = [
+  'API_URL',
+  'APP_URL',
+  'DATABASE_URL',
+  'SMTP_URL',
+  'MAIL_FROM',
+] as const
+
+// Mailpit's SMTP port in docker-compose.yml
+const DEV_SMTP_URL = 'smtp://localhost:3146'
 
 const unsetIfEmpty = (value: unknown) => (value === '' ? undefined : value)
 
@@ -25,8 +35,14 @@ const Env = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
-  // Development mail catcher; when unset, sending mail fails until a provider is wired in
-  MAILPIT_URL: z.url().optional(),
+  // The SMTP server mail goes through, as smtp://user:pass@host:587 or smtps://…:465.
+  // Default (outside production only): Mailpit from docker-compose.yml
+  SMTP_URL: z.preprocess(
+    unsetIfEmpty,
+    z
+      .url({ protocol: /^smtps?$/, error: 'must be an smtp:// or smtps:// URL' })
+      .default(DEV_SMTP_URL),
+  ),
   MAIL_FROM: z.email().default('no-reply@example.com'),
   // Defaults: info, as JSON lines in production and readable lines elsewhere; silent in tests
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).optional(),

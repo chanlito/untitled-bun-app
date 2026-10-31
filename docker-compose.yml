@@ -20,7 +20,9 @@ services:
 
   mailpit:
     image: axllent/mailpit:v1.33.0
-    ports: ['3145:8025'] # web UI and HTTP API
+    ports:
+      - '3145:8025' # web UI and HTTP API
+      - '3146:1025' # SMTP: the API sends here (SMTP_URL)
 
   # Uncomment to try MySQL (see docs/switching-databases.md)
   # mysql:

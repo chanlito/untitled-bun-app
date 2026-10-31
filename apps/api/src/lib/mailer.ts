@@ -1,40 +1,56 @@
+import nodemailer from 'nodemailer'
+
+import type { Logger } from './logger'
+
 export type Mail = { to: string; subject: string; text: string; html?: string }
 
 export interface Mailer {
   send(mail: Mail): Promise<void>
+  // Checks the connection once at startup, so a wrong SMTP_URL shows in the log right away
+  verify?(): Promise<void>
+  // Closes open connections on shutdown
+  close?(): void
 }
 
-// Development only: delivers to Mailpit and echoes to the console, sign-in codes included
-// (index.ts never picks this mailer in production). The console copy is the fallback,
-// so a Mailpit that is down or rejecting never fails the request that sent the mail.
-export function createMailpitMailer({ url, from }: { url: string; from: string }): Mailer {
+// Any SMTP server: Mailpit in development (docker-compose.yml), and in production your mail
+// host's SMTP or one you run yourself. `url` is a connection URL, credentials included:
+// smtps://user:pass@host:465 (TLS from the start) or smtp://user:pass@host:587 (STARTTLS,
+// required so credentials and codes never cross the network in the clear; only a server on
+// this machine, like Mailpit, may skip it, and `?requireTLS=false` in the URL opts out).
+// Connections are pooled. A failed send rejects, so the request that sent it fails loudly.
+export function createSmtpMailer({
+  url,
+  from,
+  logger,
+  requireTLS = requiresTls(url),
+}: {
+  url: string
+  from: string
+  logger: Logger
+  requireTLS?: boolean
+}): Mailer {
+  // Settings in the URL's query win over these
+  const transport = nodemailer.createTransport({ url, pool: true, requireTLS })
   return {
     async send(mail) {
-      console.log(`[mail] to ${mail.to}: ${mail.subject}\n${mail.text}`)
+      // Not the address or the body: they hold personal data and sign-in codes
+      const info = await transport.sendMail({ from, ...mail })
+      logger.debug({ messageId: info.messageId }, 'mail sent')
+    },
+    async verify() {
       try {
-        const res = await fetch(`${url}/api/v1/send`, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            From: { Email: from },
-            To: [{ Email: mail.to }],
-            Subject: mail.subject,
-            Text: mail.text,
-            HTML: mail.html,
-          }),
-        })
-        if (!res.ok) console.error(`[mail] Mailpit rejected the message: ${res.status}`)
+        await transport.verify()
       } catch (err) {
-        console.error(`[mail] Mailpit is unreachable at ${url}:`, err)
+        logger.warn({ err }, 'SMTP server unreachable: mail will fail until it answers')
       }
     },
+    close: () => transport.close(),
   }
 }
 
-// Production placeholder: fails loudly until a real provider (e.g. Resend) is wired in
-export const unconfiguredMailer: Mailer = {
-  send: () => Promise.reject(new Error('No mail provider is configured for production')),
-}
+// STARTTLS is required unless the server is on this machine (Mailpit in development)
+export const requiresTls = (url: string) =>
+  !new Set(['localhost', '127.0.0.1', '[::1]']).has(new URL(url).hostname.toLowerCase())
 
 // Tests: keep every message so assertions can read codes and links
 export function createMemoryMailer() {

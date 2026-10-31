@@ -7,6 +7,8 @@ const urls = {
   API_URL: 'https://api.example.com',
   APP_URL: 'https://app.example.com/',
   DATABASE_URL: 'postgres://u:p@db.example.com/app',
+  SMTP_URL: 'smtps://user:pass@smtp.example.com:465',
+  MAIL_FROM: 'no-reply@app.example.com',
 }
 
 describe('parseEnv', () => {
@@ -40,6 +42,15 @@ describe('parseEnv', () => {
     expect(migrates({ MIGRATE_ON_START: 'false' })).toBe(false)
     expect(migrates({ NODE_ENV: 'production', MIGRATE_ON_START: 'true' })).toBe(true)
     expect(parseEnv({ ...secret, MIGRATE_ON_START: 'maybe' }).success).toBe(false)
+  })
+
+  test('SMTP_URL: Mailpit outside production, and only smtp:// or smtps://', () => {
+    for (const value of [undefined, '']) {
+      const result = parseEnv({ ...secret, SMTP_URL: value })
+      if (!result.success) throw new Error(result.error)
+      expect(result.data.SMTP_URL).toBe('smtp://localhost:3146')
+    }
+    expect(parseEnv({ ...secret, SMTP_URL: 'https://smtp.example.com' }).success).toBe(false)
   })
 
   test('shutdown timings: no delay and 8 s of grace by default, an empty value included', () => {

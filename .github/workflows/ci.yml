@@ -100,6 +100,8 @@ jobs:
           API_URL=http://localhost:3141
           APP_URL=http://localhost:3142
           BETTER_AUTH_SECRET=$(openssl rand -hex 32)
+          SMTP_URL=smtp://127.0.0.1:2525
+          MAIL_FROM=no-reply@example.com
           ENV
           docker run --rm --network host --env-file prod.env api bun run db:migrate
           docker run -d --name api --network host --env-file prod.env api
