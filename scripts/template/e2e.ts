@@ -1,5 +1,5 @@
 // End to end: a new project made from this template, set up exactly as the README says.
-//   bun scripts/template/e2e.ts           needs Docker, Bun canary, and ports 3141-3145 free
+//   bun scripts/template/e2e.ts           needs Docker, Bun canary, and ports 3141-3146 free
 //   bun scripts/template/e2e.ts --keep    leave the project and its containers behind
 // Copies the tracked files into a fresh repo (what "Use this template" does), runs
 // `bun run setup` in it, and checks that the result is renamed, committed, clean, passes
@@ -44,7 +44,7 @@ async function must(cmd: string[]) {
 }
 const git = (...a: string[]) => must(['git', ...a])
 
-for (const port of [3141, 3142, 3143, 3145]) {
+for (const port of [3141, 3142, 3143, 3145, 3146]) {
   if (!(await isFree(port))) {
     console.error(`✗ Port ${port} is in use. Stop the template's own services first.`)
     process.exit(1)

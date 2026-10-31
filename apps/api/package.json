@@ -14,14 +14,15 @@
   "dependencies": {
     "@better-auth/api-key": "1.7.14",
     "@hono/zod-openapi": "catalog:",
+    "@scalar/hono-api-reference": "^0.12.17",
     "@untitled-bun-app/config": "workspace:*",
     "@untitled-bun-app/shared": "workspace:*",
-    "@scalar/hono-api-reference": "^0.12.17",
     "better-auth": "1.7.14",
     "drizzle-orm": "1.0.0-rc.5",
     "hono": "catalog:",
     "hono-rate-limiter": "0.5.4",
     "ipaddr.js": "2.5.0",
+    "nodemailer": "10.3.1",
     "pino": "10.4.0",
     "pino-pretty": "13.2.0",
     "zod": "catalog:"
@@ -29,6 +30,9 @@
   "devDependencies": {
     "@electric-sql/pglite": "0.5.14",
     "@types/bun": "catalog:",
-    "drizzle-kit": "1.0.0-rc.5"
+    "@types/nodemailer": "8.0.2",
+    "@types/smtp-server": "3.5.13",
+    "drizzle-kit": "1.0.0-rc.5",
+    "smtp-server": "3.21.3"
   }
 }

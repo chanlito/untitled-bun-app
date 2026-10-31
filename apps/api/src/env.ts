@@ -10,6 +10,9 @@ const TEST_SECRET = 'test-only-secret-never-used-outside-bun-test'
 // deploy that forgets one fails to start instead of pointing at localhost
 const REQUIRED_IN_PRODUCTION = ['API_URL', 'APP_URL', 'DATABASE_URL'] as const
 
+// Mailpit's SMTP port in docker-compose.yml
+const DEV_SMTP_URL = 'smtp://localhost:3146'
+
 const unsetIfEmpty = (value: unknown) => (value === '' ? undefined : value)
 
 const Env = z.object({
@@ -25,8 +28,13 @@ const Env = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
-  // Development mail catcher; when unset, sending mail fails until a provider is wired in
-  MAILPIT_URL: z.url().optional(),
+  // The SMTP server mail goes through, as smtp://user:pass@host:587 or smtps://…:465.
+  // Default: Mailpit from docker-compose.yml, outside production only. Production without
+  // it starts, but every email (sign-in codes included) fails until it is set.
+  SMTP_URL: z.preprocess(
+    unsetIfEmpty,
+    z.url({ protocol: /^smtps?$/, error: 'must be an smtp:// or smtps:// URL' }).optional(),
+  ),
   MAIL_FROM: z.email().default('no-reply@example.com'),
   // Defaults: info, as JSON lines in production and readable lines elsewhere; silent in tests
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).optional(),
@@ -82,6 +90,7 @@ export function parseEnv(source: Record<string, string | undefined>) {
       LOG_LEVEL: data.LOG_LEVEL ?? (data.NODE_ENV === 'test' ? 'silent' : 'info'),
       LOG_FORMAT: data.LOG_FORMAT ?? (data.NODE_ENV === 'production' ? 'json' : 'pretty'),
       MIGRATE_ON_START: data.MIGRATE_ON_START ?? data.NODE_ENV !== 'production',
+      SMTP_URL: data.SMTP_URL ?? (data.NODE_ENV === 'production' ? undefined : DEV_SMTP_URL),
     },
   }
 }

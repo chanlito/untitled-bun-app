@@ -3,7 +3,7 @@ import { createDb, migrateDb } from './db/client'
 import { env } from './env'
 import { createShutdown } from './lib/graceful-shutdown'
 import { createLogger, type Logger } from './lib/logger'
-import { createMailpitMailer, unconfiguredMailer } from './lib/mailer'
+import { createSmtpMailer, unconfiguredMailer } from './lib/mailer'
 
 const logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT })
 
@@ -33,11 +33,11 @@ if (!running.listening) {
   }
 }
 
-// Mailpit only when explicitly configured (.env.example sets it for development), so a
-// deploy that forgets NODE_ENV fails closed instead of logging sign-in codes
-const mailer = env.MAILPIT_URL
-  ? createMailpitMailer({ url: env.MAILPIT_URL, from: env.MAIL_FROM })
+const mailer = env.SMTP_URL
+  ? createSmtpMailer({ url: env.SMTP_URL, from: env.MAIL_FROM, logger })
   : unconfiguredMailer
+if (!env.SMTP_URL) logger.warn('SMTP_URL is not set: sign-in emails will fail')
+void mailer.verify?.()
 
 const db = createDb(env.DATABASE_URL)
 // Off in production by default: `bun run db:migrate` runs once per release there (env.ts)
@@ -66,5 +66,8 @@ running.shutdown = createShutdown({
   delayMs: env.SHUTDOWN_DELAY_MS,
   graceMs: env.SHUTDOWN_GRACE_MS,
   // Requests are done by now: whatever query is still open (a probe) gets a second
-  close: () => db.$client.close({ timeout: 1 }),
+  close: async () => {
+    mailer.close?.()
+    await db.$client.close({ timeout: 1 })
+  },
 })

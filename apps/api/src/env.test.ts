@@ -42,6 +42,20 @@ describe('parseEnv', () => {
     expect(parseEnv({ ...secret, MIGRATE_ON_START: 'maybe' }).success).toBe(false)
   })
 
+  test('SMTP_URL: Mailpit outside production, unset in production unless given', () => {
+    const smtp = (source: Record<string, string>) => {
+      const result = parseEnv({ ...secret, ...urls, ...source })
+      if (!result.success) throw new Error(result.error)
+      return result.data.SMTP_URL
+    }
+    expect(smtp({})).toBe('smtp://localhost:3146')
+    expect(smtp({ NODE_ENV: 'production' })).toBeUndefined()
+    expect(smtp({ NODE_ENV: 'production', SMTP_URL: '' })).toBeUndefined()
+    const url = 'smtps://user:pass@smtp.example.com:465'
+    expect(smtp({ NODE_ENV: 'production', SMTP_URL: url })).toBe(url)
+    expect(parseEnv({ ...secret, SMTP_URL: 'https://smtp.example.com' }).success).toBe(false)
+  })
+
   test('shutdown timings: no delay and 8 s of grace by default, an empty value included', () => {
     for (const value of [undefined, '']) {
       const result = parseEnv({ ...secret, SHUTDOWN_DELAY_MS: value, SHUTDOWN_GRACE_MS: value })
