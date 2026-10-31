@@ -1,0 +1,15 @@
+{
+  "name": "@repo/app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --env-file=../../.env.local --hot src/server.ts"
+  },
+  "dependencies": {
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/api": "workspace:*",
+    "@types/bun": "catalog:"
+  }
+}
