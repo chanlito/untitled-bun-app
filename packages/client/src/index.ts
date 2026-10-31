@@ -10,4 +10,4 @@ export type Client = ReturnType<typeof hc<AppType>>
 // Cookies by default, for a browser app on another origin; pass `headers` with a bearer
 // token or API key where cookies don't apply, such as React Native
 export const createClient = (baseUrl: string, options?: ClientRequestOptions): Client =>
-  hc<AppType>(baseUrl, { init: { credentials: 'include' }, ...options })
+  hc<AppType>(baseUrl, { ...options, init: { credentials: 'include', ...options?.init } })

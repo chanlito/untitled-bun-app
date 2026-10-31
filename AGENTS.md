@@ -3,7 +3,7 @@
 Bun + Hono API template in a Bun workspaces monorepo. Scripts live in the root `package.json`.
 
 - `apps/api`: Hono, `@hono/zod-openapi`, Drizzle 1.0 RC on Postgres, Better Auth.
-- `apps/app`: a placeholder frontend, deliberately framework-free: `index.html` and one `main.ts` that calls the API. Replace it with React, Vue, Expo or anything else; keep `dev` (reads `APP_PORT`) and `build` scripts so `bun run dev` and the e2e still work.
+- `apps/app`: a placeholder frontend, deliberately framework-free: `index.html` and one `main.ts` that calls the API. Replace it with React, Vue, Expo or anything else; keep `dev` (reads `APP_PORT`) and `build` (refuses to run without `BUN_PUBLIC_API_URL`, the API URL baked into the bundle) scripts so `bun run dev` and the e2e still work.
 - `packages/client` (`@repo/client`): the API's typed client, `createClient(baseUrl)`, for every frontend.
 - `packages/shared` (`@repo/shared`): code both sides run, such as validation rules.
 
