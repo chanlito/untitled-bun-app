@@ -21,6 +21,7 @@ Bun + Hono API template in a Bun workspaces monorepo. Scripts live in the root `
 - `bun run setup` then `bun run dev`. Setup is safe to repeat. In a git worktree it writes that worktree's own database and ports to `.env.local`, so read URLs from there, not from the defaults.
 - CI runs format, type check and tests on the Bun in `.bun-version`, and lint on canary. Locally, Bun **canary** is required: `bun lint` is not in a stable release yet (on stable Bun it fails with `Script not found "lint"`).
 - `bun test` needs nothing running: tests use an in-process PGlite copy of the migrated schema.
+- Setup makes `ADMIN_EMAIL` (asked once, or `--admin-email`, saved in `.env.local`) an admin with `bun run db:admin`, through Better Auth's admin plugin (`src/lib/admin.ts`). On a deploy, run `db:admin` once with `ADMIN_EMAIL` set. Roles live on `user.role`, from that plugin.
 - To sign in by hand in dev, request a code (`POST /api/auth/email-otp/send-verification-otp`) and read it from Mailpit's `GET http://localhost:3145/api/v1/message/latest` or the API's console.
 - Done means `bun run verify` passes: `bun lint --max-warnings 0`, `bun fmt --check`, `bun run typecheck` and `bun test`. CI runs exactly these.
 
@@ -60,7 +61,7 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 
 The project's name lives in `packages/config/project.config.ts`. While `scripts/template/` exists (the template repo itself), its test fails if the template's name appears outside the files init renames; use `config.name` / `config.slug`.
 
-`bun scripts/template/e2e.ts` makes a new project from the template in a temp folder, runs `bun run setup` in it, then checks the rename and init commit, a second setup changing nothing, `bun run verify`, the app build, and the API with demo data and sign-in through Mailpit. The **Template** workflow runs it in CI; run it yourself after touching setup or init (it needs Docker and ports 3141-3145 free). Init deletes `scripts/template/` and `.github/workflows/template.yml`, so nothing outside them may import from `scripts/template/`.
+`bun scripts/template/e2e.ts` makes a new project from the template in a temp folder, runs `bun run setup` in it, then checks the rename and init commit, the admin it was given, a second setup changing nothing, `bun run verify`, the app build, and the API with demo data, sign-in through Mailpit and the admin API. The **Template** workflow runs it in CI; run it yourself after touching setup or init (it needs Docker and ports 3141-3145 free). Init deletes `scripts/template/` and `.github/workflows/template.yml`, so nothing outside them may import from `scripts/template/`.
 
 ## README
 

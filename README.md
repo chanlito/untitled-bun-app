@@ -14,7 +14,7 @@ Needs [Bun canary](https://bun.com) (`bun upgrade --canary`) and Docker.
    bun run dev
    ```
 
-The first setup asks for a project name, renames the project and commits the result. It ends by printing the URLs to open. Running it again is safe.
+The first setup asks for a project name, renames the project and commits the result, then asks for an admin email and makes that user an admin (sign-in is by email code, so there is no password). It ends by printing the URLs to open. Running it again is safe.
 
 ## Where to look next
 

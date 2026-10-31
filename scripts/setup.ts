@@ -3,6 +3,7 @@
 //   bun run setup --name "My App"    same, without prompts (--yes skips the rest)
 //   bun run setup --template         work on the template itself: never rename
 //   bun run setup --no-seed          skip demo data on a freshly created database
+//   bun run setup --admin-email you@example.com   make that user an admin (else it asks once)
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename } from 'node:path'
@@ -32,10 +33,13 @@ const { values: args } = parseArgs({
     yes: { type: 'boolean' },
     template: { type: 'boolean' },
     'no-seed': { type: 'boolean' },
+    'admin-email': { type: 'string' },
   },
 })
 
 const MIN_BUN = '1.4.4'
+// A first check of --admin-email and the prompt; `db:admin` validates it properly
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const worktree = await isWorktree()
 
 // Prerequisites first, so a failure never leaves a half-done init behind
@@ -47,6 +51,9 @@ if ((await $`bun lint --help`.cwd(tmpdir()).quiet().nothrow()).exitCode !== 0) {
   fail('`bun lint` is missing: it is only in Bun canary for now. Run: bun upgrade --canary')
 }
 if (!Bun.which('docker')) fail('Docker is required for Postgres and Mailpit')
+if (args['admin-email'] !== undefined && !EMAIL.test(args['admin-email'])) {
+  fail(`"${args['admin-email']}" is not an email address`)
+}
 
 // Phase 1: one-time init, only for a new project made from the template
 let init: InitAnswers | undefined
@@ -94,6 +101,7 @@ if (init?.github.clientId) {
   updates.GITHUB_CLIENT_SECRET = init.github.clientSecret
 }
 if (freshEnv && worktree) Object.assign(updates, await worktreeEnv(env))
+const adminEmail = await chooseAdmin(env)
 if (Object.keys(updates).length) await setEnv(envLocalPath, updates)
 step(freshEnv ? '.env.local created' : '.env.local up to date')
 
@@ -116,14 +124,61 @@ if (seed) {
   step('Demo data loaded')
 }
 
+if (adminEmail) {
+  // .env.local passed explicitly: this process loaded it before setup changed it, and an
+  // inherited variable would win over the child's --env-file
+  const res = await $`bun run db:admin`
+    .cwd(root)
+    .env({ ...process.env, ...Object.fromEntries(vars), ADMIN_EMAIL: adminEmail })
+    .quiet()
+    .nothrow()
+  // --filter prefixes each line with the package name and adds an "Exited" line
+  const out = res.stdout.toString().replaceAll(/^\S+ db:admin: /gm, '')
+  if (res.exitCode !== 0) fail(out.split('\n').find((l) => l.startsWith('ADMIN_EMAIL')) ?? out)
+  // Saved only once it worked, so a bad address is never kept
+  if (adminEmail !== vars.get('ADMIN_EMAIL'))
+    await setEnv(envLocalPath, { ADMIN_EMAIL: adminEmail })
+  step(out.match(/^Admin \S+ .*/m)?.[0] ?? `Admin ${adminEmail} ready`)
+} else if (adminEmail === '' && !vars.has('ADMIN_EMAIL')) {
+  await setEnv(envLocalPath, { ADMIN_EMAIL: '' })
+}
+
 const apiUrl = vars.get('API_URL')
 console.log(`
   ${projectName}
   API        ${apiUrl}   docs: ${apiUrl}/reference
   App        ${vars.get('APP_URL')}
-  Mailpit    ${vars.get('MAILPIT_URL')}${seed ? '\n  Sign in as admin@example.com or user@example.com, then open Mailpit for the code' : ''}
+  Mailpit    ${vars.get('MAILPIT_URL')}${signInHint()}
 
 Next: bun run dev`)
+
+// The admin's email: --admin-email, else what .env.local already says (empty means
+// skipped), else a worktree copies its main checkout's, else ask once in a terminal.
+// Without a terminal it stays unset, so a later run in one still asks.
+async function chooseAdmin(current: Map<string, string>): Promise<string | undefined> {
+  if (args['admin-email'] !== undefined) return args['admin-email']
+  if (current.has('ADMIN_EMAIL')) return current.get('ADMIN_EMAIL')!
+  const [main] = worktree ? await worktreePaths() : []
+  const inherited = main ? (await readEnv(`${main}/.env.local`)).get('ADMIN_EMAIL') : undefined
+  if (inherited !== undefined) return inherited
+  if (!process.stdin.isTTY || args.yes) return undefined
+  const suggested = (await $`git config user.email`.cwd(root).quiet().nothrow().text()).trim()
+  for (;;) {
+    // prompt() returns the suggestion on Enter, so skipping takes a "-"
+    const answer = (prompt('Admin email (signs in by email code)? "-" to skip:', suggested) ?? '')
+      .trim()
+      .replace(/^-$/, '')
+    if (!answer || EMAIL.test(answer)) return answer
+    console.log(`"${answer}" is not an email address`)
+  }
+}
+
+function signInHint() {
+  const who = [adminEmail, ...(seed ? ['admin@example.com', 'user@example.com'] : [])]
+    .filter((email, i, all) => email && all.indexOf(email) === i)
+    .join(', ')
+  return who ? `\n  Sign in as ${who}, then open Mailpit for the code` : ''
+}
 
 // A worktree gets its own database and the next pair of ports that is neither in use
 // nor already handed to another checkout (whose servers may simply not be running)
