@@ -10,6 +10,7 @@ import { secureHeaders } from 'hono/secure-headers'
 import { timeout } from 'hono/timeout'
 
 import type { Db } from './db/client'
+import { createReadinessCheck } from './db/readiness'
 import { env } from './env'
 import { apiIntro } from './lib/api-docs'
 import { createAuth } from './lib/auth'
@@ -45,16 +46,20 @@ export function createApp({
 }: AppOptions) {
   const auth = createAuth({ db, mailer })
   const services = createServices(db)
+  const readiness = createReadinessCheck(db, { logger })
 
   const app = createRouter()
 
   // Echoes a valid incoming X-Request-Id (from a proxy) or makes one, and returns it
   app.use(requestId({ generator: () => Bun.randomUUIDv7() }))
 
-  // One line per request. The path only: query strings can carry tokens (magic links)
+  // One line per request. The path only: query strings can carry tokens (magic links).
+  // Probes, sent every few seconds, only when something unexpected happened: /ready logs
+  // why it answered 503 itself, once per check.
   app.use(async (c, next) => {
     const start = performance.now()
     await next()
+    if (PROBES.has(c.req.path) && (c.res.ok || c.res.status === 503)) return
     const fields = {
       requestId: c.var.requestId,
       method: c.req.method,
@@ -86,7 +91,7 @@ export function createApp({
   })
 
   // Better Auth limits its own routes; everything else is limited here, before any body is
-  // read. /health is left out so load balancer probes, all from one address, never trip it.
+  // read. /health and /ready are left out so probes, all from one address, never trip them.
   // API-key clients count here too, so raise RATE_LIMIT_PER_MINUTE for heavy server-to-server use.
   app.use(
     rateLimiter<AppEnv>({
@@ -95,7 +100,7 @@ export function createApp({
       standardHeaders: 'draft-6',
       keyGenerator: (c) => rateLimitKey(c.var.clientIp),
       skip: (c) =>
-        rateLimitPerMinute <= 0 || c.req.path === '/health' || c.req.path.startsWith('/api/auth/'),
+        rateLimitPerMinute <= 0 || PROBES.has(c.req.path) || c.req.path.startsWith('/api/auth/'),
       message: { message: 'Too many requests' },
     }),
   )
@@ -199,10 +204,23 @@ export function createApp({
     }),
   )
 
-  // Routes chained here make up AppType, the contract the RPC client sees
-  const routes = app.get('/health', (c) => c.json({ ok: true })).route('/', tasksRouter)
+  // Routes chained here make up AppType, the contract the RPC client sees.
+  // /health is liveness: the process answers, nothing else is checked, so a database outage
+  // never gets the server restarted. /ready is readiness, for routing traffic: 503 until the
+  // database answers and has every migration this build ships with (db/readiness.ts).
+  const routes = app
+    .get('/health', (c) => c.json({ ok: true }))
+    .get('/ready', async (c) => {
+      const result = await readiness()
+      return result.ok ? c.json(result, 200) : c.json(result, 503)
+    })
+    .route('/', tasksRouter)
 
   return routes
 }
+
+// Health probes: not rate limited, since they all come from one address (/ready caches its
+// answer, so it can't be used to load the database), and not request-logged
+const PROBES = new Set(['/health', '/ready'])
 
 export type AppType = ReturnType<typeof createApp>

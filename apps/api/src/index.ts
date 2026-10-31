@@ -13,7 +13,11 @@ const mailer = env.MAILPIT_URL
   : unconfiguredMailer
 
 const db = createDb(env.DATABASE_URL)
-await migrateDb(db)
+// Off in production by default: `bun run db:migrate` runs once per release there (env.ts)
+if (env.MIGRATE_ON_START) {
+  await migrateDb(db)
+  logger.info('migrations applied')
+}
 
 const app = createApp({ db, mailer, logger })
 

@@ -35,6 +35,12 @@ const Env = z.object({
   TRUSTED_PROXY_HOPS: z.coerce.number().int().nonnegative().default(0),
   // Requests per client IP per minute to the API's own routes (/api/auth has its own limits)
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().nonnegative().default(300),
+  // Apply pending migrations when the server starts. Default: on outside production. In
+  // production run `bun run db:migrate` once per release instead, so replicas starting
+  // together don't race; set it to true for a single instance that should migrate itself.
+  // /ready answers 503 while any migration is pending, so traffic waits for it either way.
+  // An empty value means unset, as with the other keys .env files list without a value
+  MIGRATE_ON_START: z.preprocess((v) => (v === '' ? undefined : v), z.stringbool().optional()),
 })
 
 export type Env = z.infer<typeof Env>
@@ -61,6 +67,7 @@ export function parseEnv(source: Record<string, string | undefined>) {
       ...data,
       LOG_LEVEL: data.LOG_LEVEL ?? (data.NODE_ENV === 'test' ? 'silent' : 'info'),
       LOG_FORMAT: data.LOG_FORMAT ?? (data.NODE_ENV === 'production' ? 'json' : 'pretty'),
+      MIGRATE_ON_START: data.MIGRATE_ON_START ?? data.NODE_ENV !== 'production',
     },
   }
 }
