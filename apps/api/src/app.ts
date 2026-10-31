@@ -10,6 +10,7 @@ import { timeout } from 'hono/timeout'
 
 import type { Db } from './db/client'
 import { env } from './env'
+import { apiIntro } from './lib/api-docs'
 import { createAuth } from './lib/auth'
 import { clientIp, rateLimitKey } from './lib/client-ip'
 import { type AppEnv, createRouter } from './lib/create-router'
@@ -135,23 +136,43 @@ export function createApp({
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearer', {
     type: 'http',
     scheme: 'bearer',
-    description: 'Session token from the `set-auth-token` header after sign-in',
+    description:
+      'A session token: sign in with an email code and read it from the `set-auth-token` response header. See Authentication above.',
   })
   app.openAPIRegistry.registerComponent('securitySchemes', 'apiKey', {
     type: 'apiKey',
     in: 'header',
     name: 'x-api-key',
+    description:
+      'An API key from `POST /api/auth/api-key/create`. It acts as the user who created it. See Authentication above.',
   })
 
   app.doc31('/doc', {
     openapi: '3.1.0',
-    info: { title: project.name, version: '0.0.0', description: project.description },
+    info: {
+      title: `${project.name} API`,
+      version: '0.0.0',
+      description: apiIntro({
+        apiUrl: env.API_URL,
+        maxBodyBytes: MAX_BODY_BYTES,
+        timeoutMs: REQUEST_TIMEOUT_MS,
+        rateLimitPerMinute,
+      }),
+    },
+    servers: [{ url: env.API_URL }],
+    tags: [{ name: 'Tasks', description: 'Your to-do items. You only ever see your own.' }],
   })
 
   app.get(
     '/reference',
     Scalar({
       pageTitle: project.name,
+      // Pinned (as the ESM bundle, not cdn): the hidden footer relies on this release's markup
+      bundle: 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.76.4/esm.js',
+      showDeveloperTools: 'never',
+      agent: { disabled: true },
+      // Scalar has no option for its footer credit, so hide its link
+      customCss: 'a[href*="utm_source=powered-by"] { display: none; }',
       sources: [
         { url: '/doc', title: project.name },
         { url: '/api/auth/open-api/generate-schema', title: 'Auth' },
