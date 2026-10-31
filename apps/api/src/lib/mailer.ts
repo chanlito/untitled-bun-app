@@ -16,22 +16,21 @@ export interface Mailer {
 // host's SMTP or one you run yourself. `url` is a connection URL, credentials included:
 // smtps://user:pass@host:465 (TLS from the start) or smtp://user:pass@host:587 (STARTTLS,
 // required so credentials and codes never cross the network in the clear; only a server on
-// this machine, like Mailpit, may skip it). Connections are pooled. A failed send rejects,
-// so the request that sent it fails loudly.
+// this machine, like Mailpit, may skip it, and `?requireTLS=false` in the URL opts out).
+// Connections are pooled. A failed send rejects, so the request that sent it fails loudly.
 export function createSmtpMailer({
   url,
   from,
   logger,
+  requireTLS = !LOOPBACK.has(new URL(url).hostname.toLowerCase()),
 }: {
   url: string
   from: string
   logger: Logger
+  requireTLS?: boolean
 }): Mailer {
-  const transport = nodemailer.createTransport({
-    url,
-    pool: true,
-    requireTLS: !LOOPBACK.has(new URL(url).hostname),
-  })
+  // Settings in the URL's query win over these
+  const transport = nodemailer.createTransport({ url, pool: true, requireTLS })
   return {
     async send(mail) {
       // Not the address or the body: they hold personal data and sign-in codes

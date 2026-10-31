@@ -45,9 +45,11 @@ describe('parseEnv', () => {
   })
 
   test('SMTP_URL: Mailpit outside production, and only smtp:// or smtps://', () => {
-    const result = parseEnv({ ...secret })
-    if (!result.success) throw new Error(result.error)
-    expect(result.data.SMTP_URL).toBe('smtp://localhost:3146')
+    for (const value of [undefined, '']) {
+      const result = parseEnv({ ...secret, SMTP_URL: value })
+      if (!result.success) throw new Error(result.error)
+      expect(result.data.SMTP_URL).toBe('smtp://localhost:3146')
+    }
     expect(parseEnv({ ...secret, SMTP_URL: 'https://smtp.example.com' }).success).toBe(false)
   })
 

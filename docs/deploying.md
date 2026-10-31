@@ -27,7 +27,7 @@ Set these on the container. `.env.example` describes every variable; `src/env.ts
 
 ## Release
 
-Run migrations once per release, before the new version takes traffic, from the same image:
+Run migrations once per release, before the new version takes traffic, from the same image (it needs only `DATABASE_URL`):
 
 ```sh
 docker run --rm --env-file prod.env api bun run db:migrate

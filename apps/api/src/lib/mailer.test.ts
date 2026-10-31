@@ -35,7 +35,7 @@ async function startSmtp({ reject = false } = {}) {
       })
     },
   })
-  await new Promise<void>((resolve) => server!.listen(0, '0.0.0.0', resolve))
+  await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve))
   const { port } = server.server.address() as { port: number }
   return { url: `smtp://127.0.0.1:${port}`, received }
 }
@@ -84,15 +84,11 @@ describe('SMTP mailer', () => {
     )
   })
 
-  test('outside this machine, smtp:// refuses to send without STARTTLS', async () => {
+  test('with requireTLS (the default off this machine), never sends without STARTTLS', async () => {
     // The server offers no STARTTLS, as when an attacker strips it from the reply
     const { url, received } = await startSmtp()
-    const remote = url.replace('127.0.0.1', '127.0.0.2')
-    const mailer = createSmtpMailer({
-      url: remote,
-      from: 'a@example.com',
-      logger: createMemoryLogger(),
-    })
+    const logger = createMemoryLogger()
+    const mailer = createSmtpMailer({ url, from: 'a@example.com', logger, requireTLS: true })
     const sent = mailer.send({ to: 'ada@example.com', subject: 's', text: 't' })
     await expect(sent).rejects.toThrow(/STARTTLS/)
     mailer.close?.()

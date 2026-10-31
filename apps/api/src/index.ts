@@ -3,7 +3,7 @@ import { createDb, migrateDb } from './db/client'
 import { env } from './env'
 import { createShutdown } from './lib/graceful-shutdown'
 import { createLogger, type Logger } from './lib/logger'
-import { createSmtpMailer, type Mailer } from './lib/mailer'
+import { createSmtpMailer } from './lib/mailer'
 
 const logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT })
 
@@ -16,7 +16,7 @@ const logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT })
 type Running = {
   shutdown?: (reason: string) => Promise<void>
   logger?: Logger
-  mailer?: Mailer
+  closeResources?: () => Promise<void>
   listening?: true
 }
 const running = ((globalThis as { __api?: Running }).__api ??= {})
@@ -38,13 +38,7 @@ if (!running.listening) {
   }
 }
 
-// A `bun --hot` re-run closes the previous run's connection pool before opening its own
-running.mailer?.close?.()
-const mailer = (running.mailer = createSmtpMailer({
-  url: env.SMTP_URL,
-  from: env.MAIL_FROM,
-  logger,
-}))
+const mailer = createSmtpMailer({ url: env.SMTP_URL, from: env.MAIL_FROM, logger })
 void mailer.verify?.()
 
 const db = createDb(env.DATABASE_URL)
@@ -56,6 +50,17 @@ if (env.MIGRATE_ON_START) {
 
 const shutdownController = new AbortController()
 const app = createApp({ db, mailer, logger, shutdownSignal: shutdownController.signal })
+
+// What this run opened, closed on shutdown. A `bun --hot` re-run closes the previous run's
+// once its requests in flight have had time to finish.
+const closeResources = async () => {
+  mailer.close?.()
+  // Requests are done by now: whatever query is still open (a probe) gets a second
+  await db.$client.close({ timeout: 1 })
+}
+const previous = running.closeResources
+if (previous) setTimeout(() => void previous(), REQUEST_TIMEOUT_MS + 5_000).unref()
+running.closeResources = closeResources
 
 const server = Bun.serve({
   port: env.PORT,
@@ -73,9 +78,5 @@ running.shutdown = createShutdown({
   logger,
   delayMs: env.SHUTDOWN_DELAY_MS,
   graceMs: env.SHUTDOWN_GRACE_MS,
-  // Requests are done by now: whatever query is still open (a probe) gets a second
-  close: async () => {
-    mailer.close?.()
-    await db.$client.close({ timeout: 1 })
-  },
+  close: closeResources,
 })

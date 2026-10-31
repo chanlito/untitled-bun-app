@@ -37,9 +37,12 @@ const Env = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   // The SMTP server mail goes through, as smtp://user:pass@host:587 or smtps://…:465.
   // Default (outside production only): Mailpit from docker-compose.yml
-  SMTP_URL: z
-    .url({ protocol: /^smtps?$/, error: 'must be an smtp:// or smtps:// URL' })
-    .default(DEV_SMTP_URL),
+  SMTP_URL: z.preprocess(
+    unsetIfEmpty,
+    z
+      .url({ protocol: /^smtps?$/, error: 'must be an smtp:// or smtps:// URL' })
+      .default(DEV_SMTP_URL),
+  ),
   MAIL_FROM: z.email().default('no-reply@example.com'),
   // Defaults: info, as JSON lines in production and readable lines elsewhere; silent in tests
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).optional(),
