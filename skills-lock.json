@@ -5,19 +5,19 @@
       "source": "chanlito/skills",
       "sourceType": "github",
       "skillPath": "skills/pr-proof/SKILL.md",
-      "computedHash": "9a8beff1ac179b64e42d162039824e45f7eeaa108323121ae762fab895ed354a"
+      "computedHash": "8770ec8940590b7966b38a4191748548f9e4bcd9cf0b154ca1e21c53f20b07fb"
     },
     "pr-risks": {
       "source": "chanlito/skills",
       "sourceType": "github",
       "skillPath": "skills/pr-risks/SKILL.md",
-      "computedHash": "c50a3888ced7d08025a96e610f6b905ef0e5e51816f53a39b644fe12e33b9f59"
+      "computedHash": "33b22e86d350f9fd754e33c187d2acd37bcd15a5f73ed71fe049f18d30d57ec0"
     },
     "pr-writing": {
       "source": "chanlito/skills",
       "sourceType": "github",
       "skillPath": "skills/pr-writing/SKILL.md",
-      "computedHash": "17acf790c92e42e2824c4ff5d7ff1081af89f05144e96da9d7ee194cdc5bd721"
+      "computedHash": "9e33dd08f43151c80a29a9b7c42e36ca82dd9021d4f4097d0ca7988ba7d013bf"
     }
   }
 }

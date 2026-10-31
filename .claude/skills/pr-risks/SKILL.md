@@ -31,11 +31,14 @@ Then check what paths can't tell. A new sign-in, permission, payment, secret or 
 
 ## 3. Run the reviews
 
-- Review in a fresh context, not the session that wrote the change, so the reviewer isn't anchored on the author's reasoning.
-- After round 1, review only what changed since.
-- Problems in code the change didn't touch become issues, not part of this PR.
-- If the last round still finds real problems, rethink the approach instead of patching again.
-- An agent's approval never counts as a person's.
+The tier sets the most rounds; what each round finds decides how many you run.
+
+1. **Round 1, always**, for Medium and High, in a fresh context: not the session that wrote the change, so the reviewer isn't anchored on the author's reasoning.
+2. **Another round only if the last one changed code.** It reviews only the fixes since. Fixes to wording, comments or tests alone don't need one.
+3. **Stop when a round finds nothing real.** If the last round allowed (2 for Medium, 3 for High) still finds real problems, don't patch again: rethink the approach, or hand it to a person with what's left.
+4. **One security review for High**, of what made it High: the files `risk.ts --json` lists, or the new sign-in, permission, payment, secret or outside service when you raised it by judgment. Run it again only if a fix touches those.
+
+Problems in code the change didn't touch become issues, not part of this PR. An agent's approval never counts as a person's.
 
 Record what each round found and what was fixed in the PR's Review section. Put the tier near the top of the PR, like `**Tier:** High`, and add the label (`risk:low`, `risk:medium` or `risk:high` by default). The label already shows on the PR and the reason is in the config, so don't repeat them in the body. The pr-writing skill fills in the tier.
 

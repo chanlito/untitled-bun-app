@@ -58,6 +58,12 @@ export type Config = {
     dist: string;
     /** What the build reads: when one is newer than the build, it rebuilds. */
     sources: string[];
+    /**
+     * Installs dependencies for the before build, in its worktree. Empty:
+     * a workspace monorepo runs its lockfile's install, anything else
+     * borrows this checkout's node_modules.
+     */
+    install: string;
     /** The pages to shoot when none are named. */
     pages: string[];
     languages: {
@@ -206,10 +212,12 @@ export const DEFAULTS: Config = {
     },
     reviews: {
       Low: [],
-      Medium: ['code review (/code-review medium), up to 2 rounds'],
+      Medium: [
+        'code review (/code-review medium), up to 2 rounds, a new one only after code fixes',
+      ],
       High: [
-        'code review (/code-review high), up to 3 rounds',
-        'security review (/security-review)',
+        'code review (/code-review high), up to 3 rounds, a new one only after code fixes',
+        'security review (/security-review) of the files that made it High',
         'a person reads the diff',
       ],
     },
@@ -226,6 +234,7 @@ export const DEFAULTS: Config = {
       'bun.lock',
       'pnpm-lock.yaml',
     ],
+    install: '',
     pages: ['/'],
     languages: { default: 'en', prefixed: [] },
     fakes: {},

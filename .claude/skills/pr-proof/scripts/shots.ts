@@ -11,7 +11,8 @@
 //   bun scripts/shots.ts /about/ --mark '.hero h1' --note 'now wraps'
 //                                               also point an arrow at it with the note,
 //                                               for a change that's hard to spot
-//   bun scripts/shots.ts /pricing/ --publish    push the sheets to the proof branch
+//   bun scripts/shots.ts --publish              push the last run's sheets (the ones
+//                                               you looked at) to the proof branch
 //                                               and print the Markdown for the PR
 //
 // A path in any language brings the others (from skills.config.ts,
@@ -22,26 +23,31 @@
 // close-ups show the same spot, so a new element is compared with what was
 // there. --no-ring keeps the shots clean and --no-zoom skips the close-ups,
 // so only what helps a reviewer goes on the sheet. Everything lands in
-// .checks/shots/, which ignores itself in git.
+// .checks/shots/, which ignores itself in git. The before site is built once
+// per commit of the ref and kept in .checks/before-site/, so shooting again
+// doesn't build it again; --build builds both sites anyway.
 
+import { spawnSync } from 'node:child_process';
 import {
   cpSync,
   existsSync,
   mkdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { Browser, Page } from 'playwright';
 import { config, languages } from './config';
-import { branch, output, repo, run } from './git';
+import { branch, output, repo, run, sh, treeHash } from './git';
 import {
   bare,
   build,
   DIST,
+  installCommand,
   langOf,
   launch,
   open,
@@ -51,8 +57,13 @@ import {
   serve,
 } from './harness';
 
-const { values: flags, positionals } = parseArgs({
+const {
+  values: flags,
+  positionals,
+  tokens,
+} = parseArgs({
   allowPositionals: true,
+  tokens: true,
   options: {
     langs: { type: 'string', default: languages().join(',') },
     themes: { type: 'string', default: 'light,dark' },
@@ -73,6 +84,15 @@ const { values: flags, positionals } = parseArgs({
 
 const CHECKS = '.checks';
 const OUT = `${CHECKS}/shots`;
+/** The last run's sheets, and the code they were shot from. */
+const MANIFEST = `${OUT}/sheets.json`;
+// --publish on its own pushes the sheets that were looked at, instead of
+// shooting them again.
+const publishOnly =
+  !!flags.publish &&
+  tokens.every(
+    (t) => t.kind === 'option' && (t.name === 'publish' || t.name === 'name'),
+  );
 const langs = flags.langs.split(',');
 const themes = flags.themes.split(',') as ('light' | 'dark')[];
 const widths = flags.widths.split(',').map(Number);
@@ -321,27 +341,76 @@ async function shoot(
   return shots;
 }
 
-/** Builds another commit's site in a worktree, for the before shots. */
+/**
+ * Builds another commit's site for the before shots, in a worktree with its
+ * own dependencies. The build is kept in .checks/before-site/ and used again
+ * until the ref moves or the build settings change. Returns its pages' folder.
+ */
 function buildBefore(ref: string) {
-  const dir = `${CHECKS}/before`;
-  if (existsSync(dir)) run(['git', 'worktree', 'remove', '--force', dir]);
-  rmSync(dir, { recursive: true, force: true });
   // Branches start from origin/main and the local main is often old, so a
   // branch name means its latest version on GitHub when there is one.
   output(['git', 'fetch', '-q', 'origin', ref]);
-  const remote = output([
-    'git',
-    'rev-parse',
-    '--verify',
-    '-q',
-    `origin/${ref}`,
-  ]);
-  if (run(['git', 'worktree', 'add', '--detach', dir, remote || ref]) !== 0)
+  const sha =
+    output(['git', 'rev-parse', '--verify', '-q', `origin/${ref}^{commit}`]) ||
+    output(['git', 'rev-parse', '--verify', '-q', `${ref}^{commit}`]);
+  if (!sha) {
+    console.error(`There's no commit called ${ref}.`);
     process.exit(1);
-  if (existsSync('node_modules'))
+  }
+  const { build: command, dist, install } = config().site;
+  const kept = `${CHECKS}/before-site`;
+  const stamp = JSON.stringify({ sha, command, dist, install });
+  if (
+    !flags.build &&
+    existsSync(`${kept}/dist`) &&
+    existsSync(`${kept}/built-from.json`) &&
+    readFileSync(`${kept}/built-from.json`, 'utf8') === stamp
+  ) {
+    console.log(
+      `Before: ${ref} at ${sha.slice(0, 7)}, built on an earlier run.`,
+    );
+    return `${kept}/dist`;
+  }
+  rmSync(kept, { recursive: true, force: true });
+  const dir = `${CHECKS}/before`;
+  if (existsSync(dir)) run(['git', 'worktree', 'remove', '--force', dir]);
+  rmSync(dir, { recursive: true, force: true });
+  run(['git', 'worktree', 'prune']);
+  if (run(['git', 'worktree', 'add', '-q', '--detach', dir, sha]) !== 0)
+    process.exit(1);
+  const installing = installCommand(dir);
+  if (installing) {
+    console.log(`Installing ${ref}'s dependencies: ${installing}`);
+    if (sh(installing, dir) !== 0) {
+      console.error('The install failed.');
+      process.exit(1);
+    }
+  } else if (existsSync('node_modules'))
     symlinkSync(resolve('node_modules'), `${dir}/node_modules`);
   build(true, dir);
-  return dir;
+  mkdirSync(kept, { recursive: true });
+  renameSync(join(dir, DIST()), `${kept}/dist`);
+  writeFileSync(`${kept}/built-from.json`, stamp);
+  run(['git', 'worktree', 'remove', '--force', dir]);
+  return `${kept}/dist`;
+}
+
+/** True when every before shot is the same image as its after shot. */
+function unchanged(shots: Shot[]) {
+  const before = shots.filter((s) => s.side === 'before');
+  return (
+    before.length > 0 &&
+    before.every((b) => {
+      const a = shots.find(
+        (s) =>
+          s.side === 'after' &&
+          s.path === b.path &&
+          s.width === b.width &&
+          s.theme === b.theme,
+      );
+      return a && readFileSync(a.file).equals(readFileSync(b.file));
+    })
+  );
 }
 
 /**
@@ -408,13 +477,27 @@ function publish(files: string[]) {
   const dir = `${CHECKS}/proof`;
   if (existsSync(dir)) run(['git', 'worktree', 'remove', '--force', dir]);
   rmSync(dir, { recursive: true, force: true });
-  const exists = run(['git', 'fetch', '-q', 'origin', proof]) === 0;
+  // In English whatever the locale, to tell the cases apart.
+  const fetched = spawnSync('git', ['fetch', '-q', 'origin', proof], {
+    encoding: 'utf8',
+    env: { ...process.env, LC_ALL: 'C' },
+  });
+  const why = (fetched.stderr ?? '').trim();
+  // On first use the branch isn't there yet, which git calls fatal. Any
+  // other failure (offline, signed out) stops here, with git's reason.
+  const exists = fetched.status === 0;
+  if (!exists && !/couldn't find remote ref/i.test(why)) {
+    console.error(why || `git fetch origin ${proof} failed.`);
+    process.exit(1);
+  }
   if (exists) {
-    if (run(['git', 'worktree', 'add', '--detach', dir, `origin/${proof}`]))
+    if (
+      run(['git', 'worktree', 'add', '-q', '--detach', dir, `origin/${proof}`])
+    )
       process.exit(1);
   } else {
     // A branch with no history of its own, so it never mixes with the code.
-    if (run(['git', 'worktree', 'add', '--detach', dir])) process.exit(1);
+    if (run(['git', 'worktree', 'add', '-q', '--detach', dir])) process.exit(1);
     run(['git', 'checkout', '-q', '--orphan', `${proof}-new`], dir);
     run(['git', 'rm', '-rfq', '.'], dir);
   }
@@ -438,6 +521,26 @@ function publish(files: string[]) {
   }
 }
 
+if (publishOnly) {
+  if (!existsSync(MANIFEST)) {
+    console.error(
+      'No sheets to publish: shoot first, look at them, then publish.',
+    );
+    process.exit(1);
+  }
+  const last = JSON.parse(readFileSync(MANIFEST, 'utf8')) as {
+    tree: string;
+    sheets: string[];
+  };
+  const now = treeHash();
+  if (!last.tree || !now || last.tree !== now)
+    console.log(
+      '! The code changed since these sheets were shot. If that change shows on a page, shoot again first.',
+    );
+  publish(last.sheets);
+  process.exit(0);
+}
+
 build(flags.build);
 const chosen = pick(pages(), asked, true).filter((p) =>
   langs.includes(langOf(p)),
@@ -446,25 +549,34 @@ if (!chosen.length) {
   console.error(`No pages match ${asked.join(' ')}`);
   process.exit(1);
 }
+// Ignores itself, so nothing here ever needs a .gitignore line. Written
+// first, so the before build kept in it never shows up in git.
+mkdirSync(CHECKS, { recursive: true });
+writeFileSync(`${CHECKS}/.gitignore`, '*\n');
+// The before site first: it's the build most likely to fail, so nothing is
+// shot until both sites are ready.
+const beforeDist = flags.before ? buildBefore(flags.before) : '';
+const tree = treeHash();
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(`${OUT}/after`, { recursive: true });
-// Ignores itself, so nothing here ever needs a .gitignore line.
-writeFileSync(`${CHECKS}/.gitignore`, '*\n');
 mkdirSync(`${OUT}/before`, { recursive: true });
 const browser = await launch();
 const after = await serve();
 const shots = await shoot(browser, after.url, chosen, 'after');
 after.stop();
-if (flags.before) {
-  const dir = buildBefore(flags.before);
-  const before = await serve(`${dir}/${DIST()}`);
-  const old = new Set(pages(`${dir}/${DIST()}`));
+if (beforeDist) {
+  const before = await serve(beforeDist);
+  const old = new Set(pages(beforeDist));
   const existed = chosen.filter((p) => old.has(p));
   for (const p of chosen)
     if (!old.has(p)) console.log(`${p} is new: no before shot.`);
   shots.push(...(await shoot(browser, before.url, existed, 'before')));
   before.stop();
-  run(['git', 'worktree', 'remove', '--force', dir]);
+  // New pages are a change of their own.
+  if (existed.length === chosen.length && unchanged(shots))
+    console.log(
+      "! Before and after are the same in every shot: the change isn't on these pages, or the build didn't pick it up.",
+    );
 }
 
 await browser.close();
@@ -481,8 +593,9 @@ for (const page of new Set(chosen.map(bare)))
     if (mine.length) sheets.push(await sheet(drawer, page, width, mine));
   }
 await drawer.close();
+writeFileSync(MANIFEST, JSON.stringify({ tree, sheets }, null, 2));
 console.log(
-  `${shots.length} screenshots in ${OUT}/after${flags.before ? ' and before' : ''}, sheets:`,
+  `${shots.length} screenshots in ${OUT}/after${beforeDist ? ' and before' : ''}, sheets:`,
 );
 for (const file of sheets) console.log(`  ${file}`);
 if (flags.publish) publish(sheets);

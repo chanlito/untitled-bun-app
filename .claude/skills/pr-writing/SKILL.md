@@ -25,6 +25,8 @@ bun $SKILL/scripts/check.ts
 
 It checks the branch name and the commit subjects against the project's format, runs the project's own checks (`checks` in `skills.config.ts`, such as format, type-check, tests and build), and prints the risk tier and the preview link. It must end with `✓ Ready to push.` When it fails, fix the cause and run it again. Don't push around it.
 
+The checks are slow, so a bad branch name or commit subject stops it before they run. Checks that already passed on the exact same code are skipped, so rewording a commit doesn't run them again. Files git ignores, like `.env` or what's inside `node_modules`, aren't part of that: after changing only those, use `--rerun`.
+
 ## 4. Get the tier and the proof
 
 - The tier and the reviews it calls for come from the **pr-risks** skill. Follow it.
