@@ -16,7 +16,14 @@ export function createApp({ db, mailer }: { db: Db; mailer: Mailer }) {
 
   const app = createRouter()
 
-  app.use(cors({ origin: env.APP_URL, credentials: true }))
+  app.use(
+    cors({
+      origin: env.APP_URL,
+      credentials: true,
+      // The bearer plugin returns the session token in this header after sign-in
+      exposeHeaders: ['set-auth-token'],
+    }),
+  )
   app.use(async (c, next) => {
     c.set('auth', auth)
     c.set('services', services)

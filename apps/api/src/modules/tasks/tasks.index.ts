@@ -5,8 +5,8 @@ import * as routes from './tasks.routes'
 
 const router = createRouter<AuthedEnv>()
 
-// .use() returns a plain Hono, so it stays out of the typed .openapi() chain
-router.use('/tasks', requireUser)
+// .use() returns a plain Hono, so it stays out of the typed .openapi() chain.
+// '/tasks/*' also matches '/tasks' itself, so one registration covers every route.
 router.use('/tasks/*', requireUser)
 
 export const tasksRouter = router

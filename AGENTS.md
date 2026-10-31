@@ -15,7 +15,7 @@ Bun + Hono API template: `apps/api` (Hono, `@hono/zod-openapi`, Drizzle 1.0 RC o
 A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*.routes.ts` (`createRoute` contracts), `*.handlers.ts`, `*.service.ts`, `*.types.ts`, and `*.test.ts` beside them.
 
 - Services are plain TypeScript: they take a `Db` (and a `userId` where data is per-user) and import nothing from `hono`. This keeps them callable from tests, scripts and jobs.
-- Only `*.service.ts`, `*.types.ts` and `src/db/` import from `drizzle-orm` or `db/`.
+- Data access lives in services: of a feature's files, only `*.service.ts` and `*.types.ts` import from `drizzle-orm` or `db/`. Outside features, `db/` is imported only for wiring (`app.ts`, `services.ts`, `lib/auth.ts`) and by test helpers.
 - Handlers translate HTTP: read `c.req.valid(...)`, call `c.var.services`, map domain types to the API shape (`toResponse`).
 - Dependencies are explicit: `createApp({ db, mailer })` builds auth and services; new services get registered in `src/services.ts`, new routers chained in `app.ts` (the chain is `AppType`).
 - Per-user queries filter on `userId` too, so another user's row is a 404.

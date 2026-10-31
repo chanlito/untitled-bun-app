@@ -59,4 +59,14 @@ describe('tasks routes', () => {
     expect(body.message).toBe('Validation failed')
     expect(body.issues[0]?.path).toBe('title')
   })
+
+  test('422 for an update with nothing to change', async () => {
+    const alice = await signedIn(t)
+    const task = await createTask(t, alice.user.id)
+    const res = await t.client.tasks[':id'].$patch(
+      { param: { id: task.id }, json: {} },
+      { headers: alice.headers },
+    )
+    expect(res.status).toBe(422)
+  })
 })

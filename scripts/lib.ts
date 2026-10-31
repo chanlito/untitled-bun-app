@@ -1,7 +1,9 @@
 import { existsSync, readdirSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { $ } from 'bun'
 
-export const root = new URL('..', import.meta.url).pathname
+// import.meta.dir is a decoded path, so checkouts under folders with spaces work
+export const root = `${resolve(import.meta.dir, '..')}/`
 export const envLocalPath = `${root}.env.local`
 export const migrationsDir = `${root}apps/api/drizzle`
 
@@ -27,7 +29,8 @@ export async function setEnv(path: string, values: Record<string, string>) {
   for (const [key, value] of Object.entries(values)) {
     const line = `${key}=${value}`
     const pattern = new RegExp(`^${key}=.*$`, 'm')
-    text = pattern.test(text) ? text.replace(pattern, line) : `${text.trimEnd()}\n${line}\n`
+    // A replacer function, so `$` in a value is copied literally
+    text = pattern.test(text) ? text.replace(pattern, () => line) : `${text.trimEnd()}\n${line}\n`
   }
   await Bun.write(path, text)
 }
@@ -42,8 +45,17 @@ export async function isWorktree() {
   return gitDir.trim() !== '' && gitDir.trim() !== common.trim()
 }
 
-// Migration folders not yet recorded in drizzle.__drizzle_migrations
-export async function pendingMigrations(databaseUrl: string) {
+// Every checkout of this repo (main + worktrees), for spotting ports already handed out
+export async function worktreePaths() {
+  const out = await $`git worktree list --porcelain`.cwd(root).quiet().nothrow().text()
+  return out
+    .split('\n')
+    .filter((l) => l.startsWith('worktree '))
+    .map((l) => l.slice('worktree '.length))
+}
+
+// Migration folders, and which of them drizzle.__drizzle_migrations hasn't recorded
+export async function migrationStatus(databaseUrl: string) {
   const local = existsSync(migrationsDir)
     ? readdirSync(migrationsDir, { withFileTypes: true })
         .filter((d) => d.isDirectory())
@@ -54,10 +66,10 @@ export async function pendingMigrations(databaseUrl: string) {
     const [table] = (await sql`
       select to_regclass('drizzle.__drizzle_migrations') is not null as exists
     `) as { exists: boolean }[]
-    if (!table?.exists) return local
+    if (!table?.exists) return { total: local.length, pending: local }
     const rows = (await sql`select name from drizzle.__drizzle_migrations`) as { name: string }[]
     const applied = new Set(rows.map((r) => r.name))
-    return local.filter((name) => !applied.has(name))
+    return { total: local.length, pending: local.filter((name) => !applied.has(name)) }
   } finally {
     await sql.close()
   }

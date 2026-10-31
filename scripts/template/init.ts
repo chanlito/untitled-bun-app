@@ -20,9 +20,12 @@ export const RENAMED_FILES = [
   'bun.lock',
 ]
 
+// Exactly the template's repo (https or ssh), not one whose name merely starts with it
+export const isTemplateRemote = (origin: string) =>
+  new RegExp(`[/:]${TEMPLATE.repo}(\\.git)?/?$`).test(origin.trim())
+
 export async function isTemplateRepo() {
-  const origin = await $`git remote get-url origin`.cwd(root).quiet().nothrow().text()
-  return origin.includes(TEMPLATE.repo)
+  return isTemplateRemote(await $`git remote get-url origin`.cwd(root).quiet().nothrow().text())
 }
 
 export type InitAnswers = {
@@ -81,26 +84,27 @@ export async function runInit({ name, yes }: { name?: string; yes?: boolean }) {
 }
 
 async function rename(name: string, slug: string) {
-  const replaceIn = async (file: string, edit: (text: string) => string) => {
+  // Replacer functions everywhere: a string replacement would expand `$&`, `$$`… in the name
+  const replaceIn = async (file: string, from: string | RegExp, to: string) => {
     const path = `${root}${file}`
-    await Bun.write(path, edit(await Bun.file(path).text()))
+    await Bun.write(
+      path,
+      (await Bun.file(path).text()).replace(from, () => to),
+    )
   }
-  await replaceIn('project.config.ts', (t) =>
-    t
-      .replace(`'${TEMPLATE.name}'`, `'${name.replaceAll("'", "\\'")}'`)
-      .replace(`'${TEMPLATE.slug}'`, `'${slug}'`),
-  )
-  await replaceIn('package.json', (t) =>
-    t.replace(`"name": "${TEMPLATE.slug}"`, `"name": "${slug}"`),
-  )
+  const quoted = `'${name.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`
+  await replaceIn('project.config.ts', `'${TEMPLATE.name}'`, quoted)
+  await replaceIn('project.config.ts', `'${TEMPLATE.slug}'`, `'${slug}'`)
+  await replaceIn('package.json', `"name": "${TEMPLATE.slug}"`, `"name": "${slug}"`)
   // bun install keeps the old root name in the lockfile, so rename it here
-  await replaceIn('bun.lock', (t) => t.replace(`"name": "${TEMPLATE.slug}"`, `"name": "${slug}"`))
-  await replaceIn('docker-compose.yml', (t) => t.replace(`name: ${TEMPLATE.slug}`, `name: ${slug}`))
+  await replaceIn('bun.lock', `"name": "${TEMPLATE.slug}"`, `"name": "${slug}"`)
+  await replaceIn('docker-compose.yml', `name: ${TEMPLATE.slug}`, `name: ${slug}`)
   // Only the title: the rest of the README describes the template and stays useful
-  await replaceIn('README.md', (t) => t.replace(/^# .*$/m, `# ${name}`))
+  await replaceIn('README.md', /^# .*$/m, `# ${name}`)
 }
 
-// Commits exactly what init changed, leaving any other work in the tree alone
+// Commits exactly what init changed, leaving any other work in the tree alone.
+// Setup calls it right after runInit, before anything else can fail.
 export async function commitInit() {
   const paths = [...RENAMED_FILES, 'scripts/template']
   await $`git add -A -- ${paths}`.cwd(root).quiet()
