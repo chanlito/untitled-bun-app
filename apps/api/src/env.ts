@@ -19,7 +19,7 @@ const Env = z.object({
   MAIL_FROM: z.email().default('no-reply@example.com'),
 })
 
-const isTest = NODE_ENV.parse(Bun.env.NODE_ENV) === 'test'
+const isTest = Bun.env.NODE_ENV === 'test'
 const parsed = Env.safeParse({
   ...Bun.env,
   BETTER_AUTH_SECRET: Bun.env.BETTER_AUTH_SECRET || (isTest ? TEST_SECRET : undefined),

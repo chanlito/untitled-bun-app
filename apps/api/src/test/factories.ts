@@ -25,7 +25,7 @@ export async function signedIn(t: TestApp, { role = 'user' }: { role?: 'user' | 
   const { user } = (await res.json()) as { user: typeof users.$inferSelect }
   if (role !== 'user') await t.db.update(users).set({ role }).where(eq(users.id, user.id))
 
-  return { user, headers: { authorization: `Bearer ${token}` } }
+  return { user: { ...user, role }, headers: { authorization: `Bearer ${token}` } }
 }
 
 export async function createTask(t: TestApp, userId: string, title = 'A task') {

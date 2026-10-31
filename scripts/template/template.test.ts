@@ -3,7 +3,7 @@
 import { describe, expect, test } from 'bun:test'
 import { $ } from 'bun'
 import { root } from '../lib'
-import { RENAMED_FILES, slugify } from './init'
+import { isTemplateRemote, RENAMED_FILES, slugify } from './init'
 
 const ALLOWED = new Set(RENAMED_FILES)
 
@@ -17,6 +17,13 @@ describe('template', () => {
       if (/untitled/i.test(text)) offenders.push(file)
     }
     expect(offenders).toEqual([])
+  })
+
+  test('isTemplateRemote matches only the template repo itself', () => {
+    expect(isTemplateRemote('git@github.com:chanlito/untitled-bun-app.git\n')).toBe(true)
+    expect(isTemplateRemote('https://github.com/chanlito/untitled-bun-app')).toBe(true)
+    expect(isTemplateRemote('git@github.com:chanlito/untitled-bun-app-api.git')).toBe(false)
+    expect(isTemplateRemote('/home/me/projects/untitled-bun-app')).toBe(false)
   })
 
   test('slugify', () => {

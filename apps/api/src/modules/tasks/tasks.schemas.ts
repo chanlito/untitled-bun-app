@@ -16,6 +16,7 @@ export const CreateTaskSchema = z
 export const UpdateTaskSchema = z
   .object({ title: z.string().trim().min(1).max(200), done: z.boolean() })
   .partial()
+  .refine((patch) => Object.keys(patch).length > 0, 'Provide at least one of title or done')
   .openapi('UpdateTask')
 
 export const TaskParamsSchema = z.object({

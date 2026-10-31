@@ -3,7 +3,8 @@
 //   bun run setup --name "My App"    same, without prompts (--yes skips the rest)
 //   bun run setup --template         work on the template itself: never rename
 //   bun run setup --no-seed          skip demo data on a freshly created database
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { basename } from 'node:path'
 import { parseArgs } from 'node:util'
 import { $ } from 'bun'
@@ -12,12 +13,12 @@ import {
   envLocalPath,
   fail,
   isWorktree,
-  migrationsDir,
-  pendingMigrations,
+  migrationStatus,
   readEnv,
   root,
   setEnv,
   step,
+  worktreePaths,
 } from './lib'
 
 const { values: args } = parseArgs({
@@ -32,22 +33,35 @@ const { values: args } = parseArgs({
 const MIN_BUN = '1.4.4'
 const worktree = await isWorktree()
 
+// Prerequisites first, so a failure never leaves a half-done init behind
+if (!Bun.semver.satisfies(Bun.version, `>=${MIN_BUN}`)) {
+  fail(`Bun ${MIN_BUN}+ is required (you have ${Bun.version}). Run: bun upgrade --canary`)
+}
+// Probed outside the repo: here, a Bun without the built-in would run the `lint` script,
+// which calls `bun lint` again and never returns
+if ((await $`bun lint --help`.cwd(tmpdir()).quiet().nothrow()).exitCode !== 0) {
+  fail('`bun lint` is missing: it is only in Bun canary for now. Run: bun upgrade --canary')
+}
+if (!Bun.which('docker')) fail('Docker is required for Postgres and Mailpit')
+
 // Phase 1: one-time init, only for a new project made from the template
-type Init = Awaited<ReturnType<typeof import('./template/init').runInit>>
-let init: Init | undefined
-let commitInit: (() => Promise<void>) | undefined
+let init: Awaited<ReturnType<typeof import('./template/init').runInit>> | undefined
 let projectName: string = project.name
 
 if (existsSync(`${root}scripts/template`)) {
   const template = await import('./template/init')
-  const { isTemplateRepo, runInit } = template
-  if (args.template || (await isTemplateRepo())) {
+  if (args.template || (await template.isTemplateRepo())) {
     if (args.name) fail('This is the template repo itself: it is never renamed')
   } else if (worktree) {
     fail('Initialize the project from its main checkout first, then run setup here')
   } else {
-    init = await runInit({ name: args.name, yes: args.yes })
-    commitInit = template.commitInit
+    if ((await $`git var GIT_COMMITTER_IDENT`.cwd(root).quiet().nothrow()).exitCode !== 0) {
+      fail(
+        'Git needs your name and email to commit the init. Run: git config --global user.email …',
+      )
+    }
+    init = await template.runInit({ name: args.name, yes: args.yes })
+    await template.commitInit()
     projectName = init.name
   }
 } else if (args.name) {
@@ -55,20 +69,8 @@ if (existsSync(`${root}scripts/template`)) {
 }
 
 // Phase 2: every run
-if (!Bun.semver.satisfies(Bun.version, `>=${MIN_BUN}`)) {
-  fail(`Bun ${MIN_BUN}+ is required (you have ${Bun.version}). Run: bun upgrade --canary`)
-}
-if ((await $`bun lint --help`.quiet().nothrow()).exitCode !== 0) {
-  console.warn(
-    '! `bun lint` is missing: it is only in Bun canary for now. Run: bun upgrade --canary',
-  )
-}
-
 await $`bun install`.cwd(root).quiet()
 step('bun install')
-
-// After install, so the commit includes the lockfile's new root name
-await commitInit?.()
 
 const freshEnv = !existsSync(envLocalPath)
 if (freshEnv) {
@@ -92,13 +94,13 @@ step(freshEnv ? '.env.local created' : '.env.local up to date')
 const vars = await readEnv(envLocalPath)
 const databaseUrl = new URL(vars.get('DATABASE_URL')!)
 
-if (!Bun.which('docker')) fail('Docker is required for Postgres and Mailpit')
 await $`docker compose up -d --wait`.cwd(root).quiet()
 step('Postgres and Mailpit running')
 
 const created = await ensureDatabase(databaseUrl)
 // Never migrated before: a brand-new database, so demo data can't duplicate anything
-const fresh = (await pendingMigrations(databaseUrl.toString())).length === localMigrationCount()
+const status = await migrationStatus(databaseUrl.toString())
+const fresh = status.total > 0 && status.pending.length === status.total
 await $`bun run db:migrate`.cwd(root).quiet()
 step(`Database ${databaseUrl.pathname.slice(1)} ${created ? 'created and ' : ''}migrated`)
 
@@ -117,13 +119,23 @@ console.log(`
 
 Next: bun run dev`)
 
-// A worktree gets its own database and the next free pair of ports
+// A worktree gets its own database and the next pair of ports that is neither in use
+// nor already handed to another checkout (whose servers may simply not be running)
 async function worktreeEnv(base: Map<string, string>) {
   const name = basename(root.replace(/\/$/, ''))
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
+  const claimed = new Set<number>()
+  for (const path of await worktreePaths()) {
+    const other = await readEnv(`${path}/.env.local`)
+    for (const key of ['PORT', 'APP_PORT']) {
+      const port = Number(other.get(key))
+      if (port) claimed.add(port)
+    }
+  }
+  const available = async (port: number) => !claimed.has(port) && (await isFree(port))
   let api = 3151
-  while (!(await isFree(api)) || !(await isFree(api + 1))) api += 10
+  while (!(await available(api)) || !(await available(api + 1))) api += 10
   const db = new URL(base.get('DATABASE_URL')!)
   db.pathname = `/app_${name}`
   return {
@@ -134,11 +146,6 @@ async function worktreeEnv(base: Map<string, string>) {
     BUN_PUBLIC_API_URL: `http://localhost:${api}`,
     DATABASE_URL: db.toString(),
   }
-}
-
-function localMigrationCount() {
-  if (!existsSync(migrationsDir)) return 0
-  return readdirSync(migrationsDir, { withFileTypes: true }).filter((d) => d.isDirectory()).length
 }
 
 async function isFree(port: number) {
