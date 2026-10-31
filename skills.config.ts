@@ -5,53 +5,23 @@ export default {
   checks: ['bun run verify'],
   commits: 'gitmoji',
   tiers: {
-    // The highest tier any changed file calls for wins.
+    // Added to the skills' defaults, which already cover CI, Docker, .env
+    // files, migrations, auth, package.json and lockfiles, bunfig.toml, this
+    // file and the skills themselves. Only this project's own paths go here.
     high: [
-      // CI decides what gets merged and released.
-      '.github/workflows/**',
-      // How the app is built and run in production.
-      '**/Dockerfile',
-      'docker-compose.yml',
-      // Secrets and runtime settings.
-      '**/.env*',
+      // Runtime settings: a wrong default reaches production.
       'apps/api/src/env.ts',
       // The database: a bad migration or schema change can lose data.
       'apps/api/drizzle/**',
-      'apps/api/src/db/schema/**',
-      'apps/api/src/db/migrate.ts',
-      'apps/api/src/db/client.ts',
-      'apps/api/drizzle.config.ts',
+      'apps/api/src/db/**',
       // Every request goes through it: CORS, secure headers, rate limits.
       'apps/api/src/app.ts',
       // Who is signed in and what they can reach.
-      'apps/api/src/lib/auth.ts',
       'apps/api/src/lib/require-user.ts',
       // Sends email to real people.
       'apps/api/src/lib/mailer.ts',
       // Setup and template scripts run on developers' machines and in CI.
       'scripts/**',
-      // Dependencies and tooling config change what code runs everywhere.
-      '**/package.json',
-      'bun.lock',
-      '**/bunfig.toml',
-      // The skills run commands, and this file decides what they check.
-      'skills.config.ts',
-      '.claude/skills/**',
-      'skills-lock.json',
-    ],
-    medium: [
-      // Instructions agents follow on every change: never Low.
-      'AGENTS.md',
-      'CLAUDE.md',
-      '.claude/**',
-      '.agents/**',
-    ],
-    // Anything not listed is Medium.
-    low: [
-      // Docs and content only: nothing runs differently.
-      '**/*.md',
-      '**/*.mdx',
-      'docs/**',
     ],
   },
   // Committed in .agents/lessons/, so cloud agents on a fresh clone see them.

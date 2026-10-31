@@ -37,13 +37,13 @@ Then check what paths can't tell. A new sign-in, permission, payment, secret or 
 - If the last round still finds real problems, rethink the approach instead of patching again.
 - An agent's approval never counts as a person's.
 
-Record what each round found and what was fixed in the PR's Review section. Put the tier near the top of the PR with its one-line reason, and add the label (`risk:low`, `risk:medium` or `risk:high` by default). The pr-writing skill fills both in.
+Record what each round found and what was fixed in the PR's Review section. Put the tier near the top of the PR, like `**Tier:** High`, and add the label (`risk:low`, `risk:medium` or `risk:high` by default). The label already shows on the PR and the reason is in the config, so don't repeat them in the body. The pr-writing skill fills in the tier.
 
 ## 4. Improve this skill
 
 Before calling the work done, ask what this change taught about risk:
 
-- **The tier was wrong** (a path that should have been High, or a Low that needed review): fix the paths in `skills.config.ts` under `tiers`. That's a change to the project, so it goes in the PR.
+- **The tier was wrong** (a path that should have been High, or a Low that needed review): add the paths in `skills.config.ts` under `tiers`, under a comment saying why. That's a change to the project, so it goes in the PR. A path most projects would want belongs in the defaults upstream, in chanlito/skills.
 - **A review missed something it should have caught**, or a step here was wrong, slow or missing: add a lesson with `bun $SKILL/scripts/lessons.ts add "<what to do>" --pr <number>`.
 - **A person corrected how you rank or review:** add a lesson, in their words.
 - **A lesson is now covered by the config or turned out wrong:** `bun $SKILL/scripts/lessons.ts drop <n>`.
@@ -55,6 +55,7 @@ Each lesson is one line about what to do, not the story of what went wrong. Wher
 `skills.config.ts` at the repo root, all optional:
 
 - `base`: the branch to compare with.
-- `tiers.high`, `tiers.medium`, `tiers.low`: globs. Anything not Low is Medium; `medium` lifts files that would otherwise be Low.
+- `tiers.high`, `tiers.medium`, `tiers.low`: globs, added to the defaults (CI, deploy, secrets, migrations, auth, dependencies, agent config; see `scripts/config.ts`). Anything not Low is Medium; `medium` lifts files that would otherwise be Low.
+- `tiers.defaults`: `false` to use only your own lists.
 - `tiers.reasons`, `tiers.reviews`: the words for each tier.
 - `tiers.label`: the label, with `{tier}`, or `""` for none.

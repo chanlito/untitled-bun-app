@@ -33,12 +33,17 @@ export type Config = {
   /** The PR template to fill in. The skill's own is used when it's missing. */
   template: string;
   tiers: {
-    /** Paths (globs) that make a change High. */
+    /**
+     * Paths (globs) that make a change High. A project's lists add to the
+     * defaults below unless `defaults` is false.
+     */
     high: string[];
     /** Paths that make it at least Medium, even when they'd be Low. */
     medium: string[];
     /** Paths that are Low on their own. Anything else is Medium. */
     low: string[];
+    /** false to use only the project's own high, medium and low lists. */
+    defaults: boolean;
     /** Why each tier, in a few words, for the PR. */
     reasons: Record<Tier, string>;
     /** The reviews each tier gets, in order. */
@@ -114,15 +119,86 @@ export const DEFAULTS: Config = {
   template: '.github/pull_request_template.md',
   tiers: {
     high: [
+      // CI decides what gets merged and released.
       '.github/workflows/**',
-      '**/migrations/**',
-      '**/auth/**',
+      '.github/actions/**',
+      '.gitlab-ci.yml',
+      '.circleci/**',
+      'Jenkinsfile',
+      // How the app is built, hosted and run.
+      '**/Dockerfile',
+      '**/Dockerfile.*',
+      '**/docker-compose*.yml',
+      '**/compose*.yml',
       '**/*.tf',
-      'Dockerfile',
+      '**/*.tfvars',
+      'infra/**',
+      'k8s/**',
+      '**/helm/**',
+      'fly.toml',
+      'vercel.json',
+      'netlify.toml',
+      'wrangler.toml',
+      'wrangler.json*',
+      'Procfile',
+      // Secrets and runtime settings.
       '**/.env*',
+      // A bad migration or schema change can lose data.
+      '**/migrations/**',
+      '**/prisma/**',
+      '**/drizzle.config.*',
+      '**/*.sql',
+      // Who is signed in and what they can reach.
+      '**/auth/**',
+      '**/auth.*',
+      '**/permissions/**',
+      '**/permissions.*',
+      // Dependencies and tooling change what code runs everywhere.
+      '**/package.json',
+      '**/package-lock.json',
+      '**/bun.lock',
+      '**/bun.lockb',
+      '**/bunfig.toml',
+      '**/yarn.lock',
+      '**/pnpm-lock.yaml',
+      '**/pnpm-workspace.yaml',
+      '**/.npmrc',
+      '**/go.mod',
+      '**/go.sum',
+      '**/Cargo.toml',
+      '**/Cargo.lock',
+      '**/pyproject.toml',
+      '**/requirements*.txt',
+      '**/poetry.lock',
+      '**/uv.lock',
+      '**/Gemfile',
+      '**/Gemfile.lock',
+      // The skills run commands, and their config decides what they check.
+      'skills.config.*',
+      'show-your-work.json',
+      'skills-lock.json',
+      '.claude/skills/**',
+      '.agents/skills/**',
+      // Agent hooks and permissions run commands on every session.
+      '.claude/settings*.json',
     ],
-    medium: ['AGENTS.md', 'CLAUDE.md', '.claude/**', '.agents/**'],
-    low: ['**/*.md', '**/*.mdx', 'docs/**'],
+    medium: [
+      // Instructions agents follow on every change: never Low.
+      '**/AGENTS.md',
+      '**/CLAUDE.md',
+      '.claude/**',
+      '.agents/**',
+      '.cursor/**',
+      '.github/copilot-instructions.md',
+    ],
+    low: [
+      // Docs and content only: nothing runs differently.
+      '**/*.md',
+      '**/*.mdx',
+      'docs/**',
+      'LICENSE*',
+    ],
+    defaults: true,
     reasons: {
       High: 'touches deploy, CI, data or sign-in',
       Medium: 'changes how the project looks or works',
@@ -231,7 +307,14 @@ export function config(): Config {
   );
   const mine = file ? load(file) : undefined;
   if (isPlain(mine)) delete mine.$schema;
-  return (cached = merge(DEFAULTS, mine));
+  const merged = merge(DEFAULTS, mine);
+  // A project's tier lists add to the defaults, so it only names its own
+  // paths, unless it turns the defaults off.
+  const t = merged.tiers;
+  if (t.defaults)
+    for (const k of ['high', 'medium', 'low'] as const)
+      t[k] = [...new Set([...DEFAULTS.tiers[k], ...t[k]])];
+  return (cached = merged);
 }
 
 /** Every language the site has, the unprefixed one first. */
