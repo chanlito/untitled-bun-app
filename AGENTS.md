@@ -25,7 +25,7 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 
 - Log through the injected pino `Logger` (`src/lib/logger.ts`), not `console`: `logger.info({ fields }, 'message')`. JSON lines in production, pino-pretty in development. Never log tokens, codes or query strings.
 - Prefer a well-maintained library over hand-written infrastructure (pino for logs, hono-rate-limiter, ipaddr.js); write our own only for glue.
-- `app.ts` sets, in order: request id, request log, secure headers, CORS, a 1 MiB body limit (413), a 30 s timeout (504), and a per-IP rate limit (hono-rate-limiter) on everything but `/health` and `/api/auth/*` (Better Auth limits those itself).
+- `app.ts` sets, in order: request id, request log, secure headers, CORS, the client IP, a per-IP rate limit (hono-rate-limiter) on everything but `/health` and `/api/auth/*` (Better Auth limits those itself), a 1 MiB body limit (413) and a 30 s timeout (504).
 - The client IP comes from `src/lib/client-ip.ts`: the socket address, or X-Forwarded-For only as far as `TRUSTED_PROXY_HOPS`. Better Auth gets it as `x-client-ip`; don't point it back at X-Forwarded-For.
 - Production refuses to start without `API_URL`, `APP_URL` and `DATABASE_URL` (`parseEnv` in `src/env.ts`).
 
