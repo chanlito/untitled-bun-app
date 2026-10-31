@@ -12,7 +12,8 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', 'app']
+      # Over TCP: during first-time init Postgres runs a socket-only temporary server
+      test: ['CMD', 'pg_isready', '-U', 'app', '-h', '127.0.0.1']
       interval: 2s
       timeout: 3s
       retries: 15
