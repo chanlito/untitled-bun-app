@@ -15,6 +15,39 @@ describe('app', () => {
     expect(await res.json()).toEqual({ ok: true })
   })
 
+  test('GET / gives API clients the links as JSON', async () => {
+    for (const accept of [undefined, '*/*', 'application/json']) {
+      const res = await t.app.request('/', { headers: accept ? { accept } : {} })
+      expect(res.headers.get('content-type')).toContain('application/json')
+      expect(res.headers.get('vary')).toContain('Accept')
+      const body = (await res.json()) as { name: string; links: Record<string, string> }
+      expect(body.name).toBe(config.name)
+      expect(Object.keys(body.links)).toEqual(['reference', 'openapi', 'health'])
+      expect(body.links.reference).toEndWith('/reference')
+    }
+  })
+
+  test('GET / shows browsers a landing page under a strict CSP', async () => {
+    const res = await t.app.request('/', {
+      // What Chrome and Firefox send for a page load
+      headers: { accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+    })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('text/html')
+    // No scripts at all, and nothing loaded from elsewhere
+    const csp = res.headers.get('content-security-policy')!
+    expect(csp).toContain("default-src 'none'")
+    expect(csp).not.toContain('script-src')
+    const page = await res.text()
+    expect(page).toContain(`<title>${config.name} API</title>`)
+    // The links are the URLs in the JSON it shows
+    for (const path of ['/reference', '/doc', '/health'])
+      expect(page).toMatch(new RegExp(`href="[^"]*${path}"`))
+    expect(page).not.toContain('<script')
+    // The terminal shows the same JSON an API client gets, escaped
+    expect(page).toContain('<span class="k">&quot;links&quot;</span>')
+  })
+
   test('unknown routes return 404 { message }', async () => {
     const res = await t.app.request('/nope')
     expect(res.status).toBe(404)
