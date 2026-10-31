@@ -3,13 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --env-file=../../.env.local --hot src/server.ts"
+    "dev": "bun --env-file=../../.env.local run serve",
+    "serve": "bun index.html --port=$APP_PORT",
+    "build": "bun build index.html --outdir=dist --minify --env='BUN_PUBLIC_*'"
   },
   "dependencies": {
-    "hono": "catalog:"
+    "@repo/client": "workspace:*"
   },
   "devDependencies": {
-    "@repo/api": "workspace:*",
     "@types/bun": "catalog:"
   }
 }

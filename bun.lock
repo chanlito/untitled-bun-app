@@ -13,6 +13,7 @@
       "dependencies": {
         "@better-auth/api-key": "1.7.14",
         "@hono/zod-openapi": "catalog:",
+        "@repo/shared": "workspace:*",
         "@scalar/hono-api-reference": "^0.12.17",
         "better-auth": "1.7.14",
         "drizzle-orm": "1.0.0-rc.5",
@@ -32,10 +33,28 @@
     "apps/app": {
       "name": "@repo/app",
       "dependencies": {
+        "@repo/client": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+      },
+    },
+    "packages/client": {
+      "name": "@repo/client",
+      "dependencies": {
         "hono": "catalog:",
       },
       "devDependencies": {
         "@repo/api": "workspace:*",
+        "@types/bun": "catalog:",
+      },
+    },
+    "packages/shared": {
+      "name": "@repo/shared",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
         "@types/bun": "catalog:",
       },
     },
@@ -84,6 +103,10 @@
     "@repo/api": ["@repo/api@workspace:apps/api"],
 
     "@repo/app": ["@repo/app@workspace:apps/app"],
+
+    "@repo/client": ["@repo/client@workspace:packages/client"],
+
+    "@repo/shared": ["@repo/shared@workspace:packages/shared"],
 
     "@scalar/client-side-rendering": ["@scalar/client-side-rendering@0.4.16", "", { "dependencies": { "@scalar/helpers": "0.16.4", "@scalar/schemas": "0.16.0", "@scalar/types": "0.26.0", "@scalar/validation": "0.6.7" } }, "sha512-C6g3yGa6DwK++L0yxB6oebTc4fCdU/n/FrOK+08UdK4RK24bTvgcCcvjh8k6OVXDMyCodSf73ZERwVWYlnkaxA=="],
 
