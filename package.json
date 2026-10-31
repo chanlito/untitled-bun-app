@@ -15,14 +15,16 @@
     }
   },
   "scripts": {
-    "dev": "bun run --parallel --filter '@repo/*' dev",
+    "setup": "bun scripts/setup.ts",
+    "dev": "bun scripts/predev.ts && bun run --parallel --filter '@repo/*' dev",
     "lint": "bun lint --max-warnings 0",
     "fmt": "bun fmt",
     "fmt:check": "bun fmt --check",
     "typecheck": "bun check && bun check -p apps/api && bun check -p apps/app",
     "test": "bun test",
     "db:generate": "bun run --filter @repo/api db:generate",
-    "db:migrate": "bun run --filter @repo/api db:migrate"
+    "db:migrate": "bun run --filter @repo/api db:migrate",
+    "db:seed": "bun run --filter @repo/api db:seed"
   },
   "devDependencies": {
     "@types/bun": "catalog:"
