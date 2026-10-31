@@ -10,20 +10,29 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only token: nothing here writes to the repo
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
+      # Pinned, so a Bun release can't change the build under an unrelated PR
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: canary # bun lint is not in a stable release yet
+          bun-version-file: .bun-version
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
 
       - run: bun install --frozen-lockfile
-
-      - name: Lint
-        run: bun lint --max-warnings 0
 
       - name: Format
         run: bun fmt --check
@@ -33,3 +42,26 @@ jobs:
 
       - name: Test
         run: bun test
+
+  # Its own job: `bun lint` is only in Bun canary, which moves daily. Once it ships in a
+  # stable release, fold it back into `check` on the pinned version.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: canary
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun lint --max-warnings 0

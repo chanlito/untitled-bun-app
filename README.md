@@ -45,6 +45,7 @@ docker-compose.yml       # Postgres and Mailpit
 
 - **API docs**: `/doc` is the OpenAPI 3.1 spec built from the route definitions; `/reference` shows it in Scalar next to the auth endpoints.
 - **Auth**: Better Auth with magic links and email codes, optional GitHub login, and cookies, bearer tokens, API keys (`x-api-key`) and JWTs (JWKS at `/api/auth/jwks`). Roles `user` and `admin`.
+- **Production basics**: JSON logs with request ids, secure headers, body size and time limits, per-IP rate limiting, and env checks that refuse localhost defaults in production.
 - **Tests**: `bun test` runs against an in-process Postgres (PGlite), so nothing needs to be running.
 
 ## Scripts

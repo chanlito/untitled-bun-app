@@ -5,7 +5,7 @@ Bun + Hono API template: `apps/api` (Hono, `@hono/zod-openapi`, Drizzle 1.0 RC o
 ## Getting going
 
 - `bun run setup` then `bun run dev`. Setup is safe to repeat. In a git worktree it writes that worktree's own database and ports to `.env.local`, so read URLs from there, not from the defaults.
-- Bun **canary** is required: `bun lint` is not in a stable release yet (on stable Bun it fails with `Script not found "lint"`).
+- CI runs format, type check and tests on the Bun in `.bun-version`, and lint on canary. Locally, Bun **canary** is required: `bun lint` is not in a stable release yet (on stable Bun it fails with `Script not found "lint"`).
 - `bun test` needs nothing running: tests use an in-process PGlite copy of the migrated schema.
 - To sign in by hand in dev, request a code (`POST /api/auth/email-otp/send-verification-otp`) and read it from Mailpit's `GET http://localhost:3145/api/v1/message/latest` or the API's console.
 - Done means `bun run verify` passes: `bun lint --max-warnings 0`, `bun fmt --check`, `bun run typecheck` and `bun test`. CI runs exactly these.
@@ -17,9 +17,17 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 - Services are plain TypeScript: they take a `Db` (and a `userId` where data is per-user) and import nothing from `hono`. This keeps them callable from tests, scripts and jobs.
 - Data access lives in services: of a feature's files, only `*.service.ts` and `*.types.ts` import from `drizzle-orm` or `db/`. Outside features, `db/` is imported only for wiring (`app.ts`, `services.ts`, `lib/auth.ts`) and by test helpers.
 - Handlers translate HTTP: read `c.req.valid(...)`, call `c.var.services`, map domain types to the API shape (`toResponse`).
-- Dependencies are explicit: `createApp({ db, mailer })` builds auth and services; new services get registered in `src/services.ts`, new routers chained in `app.ts` (the chain is `AppType`).
+- Dependencies are explicit: `createApp({ db, mailer, logger })` builds auth and services; new services get registered in `src/services.ts`, new routers chained in `app.ts` (the chain is `AppType`).
 - Per-user queries filter on `userId` too, so another user's row is a 404.
 - Services return `null` for a miss; handlers turn that into the route's 404.
+
+## Running in production
+
+- Log through the injected pino `Logger` (`src/lib/logger.ts`), not `console`: `logger.info({ fields }, 'message')`. JSON lines in production, pino-pretty in development. Never log tokens, codes or query strings.
+- Prefer a well-maintained library over hand-written infrastructure (pino for logs, hono-rate-limiter, ipaddr.js); write our own only for glue.
+- `app.ts` sets, in order: request id, request log, secure headers, CORS, the client IP, a per-IP rate limit (hono-rate-limiter) on everything but `/health` and `/api/auth/*` (Better Auth limits those itself), a 1 MiB body limit (413) and a 30 s timeout (504).
+- The client IP comes from `src/lib/client-ip.ts`: the socket address, or X-Forwarded-For only as far as `TRUSTED_PROXY_HOPS`. Better Auth gets it as `x-client-ip`; don't point it back at X-Forwarded-For.
+- Production refuses to start without `API_URL`, `APP_URL` and `DATABASE_URL` (`parseEnv` in `src/env.ts`).
 
 ## Traps we already hit
 
