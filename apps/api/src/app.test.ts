@@ -34,6 +34,13 @@ describe('app', () => {
     expect(res.headers.get('content-type')).toContain('text/html')
   })
 
+  test('the Scalar UI hides its developer tools, AI agent and footer credit', async () => {
+    const html = await (await t.app.request('/reference')).text()
+    expect(html).toContain('"showDeveloperTools": "never"')
+    expect(html).toMatch(/"agent": \{\s*"disabled": true/)
+    expect(html).toContain('utm_source=powered-by')
+  })
+
   test("the auth spec is served for Scalar's second source", async () => {
     const res = await t.app.request('/api/auth/open-api/generate-schema')
     expect(res.status).toBe(200)

@@ -152,6 +152,10 @@ export function createApp({
     '/reference',
     Scalar({
       pageTitle: project.name,
+      showDeveloperTools: 'never',
+      agent: { disabled: true },
+      // Scalar has no option for its footer credit, so hide its link
+      customCss: 'a[href*="utm_source=powered-by"] { display: none; }',
       sources: [
         { url: '/doc', title: project.name },
         { url: '/api/auth/open-api/generate-schema', title: 'Auth' },
