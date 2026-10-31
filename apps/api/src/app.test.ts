@@ -4,7 +4,7 @@ import { config } from '@untitled-bun-app/config'
 import { sql } from 'drizzle-orm'
 
 import { createApp } from './app'
-import { createReadinessCheck } from './db/readiness'
+import { createReadinessCheck, shippedMigrations } from './db/readiness'
 import { createMemoryLogger } from './lib/logger'
 import { createMemoryMailer } from './lib/mailer'
 import { createTestApp, type TestApp } from './test/app'
@@ -36,15 +36,34 @@ describe('app', () => {
     const res = await app.request('/ready')
     expect(res.status).toBe(503)
     expect(await res.json()).toEqual({ ok: false, reason: 'database unavailable' })
-    expect(logger.lines.map((l) => l.msg)).toContain('not ready')
+    const line = logger.lines.find((l) => l.msg === 'not ready')
+    expect(line).toMatchObject({ level: 'warn', reason: 'database unavailable' })
+    expect(line?.err).toBeDefined()
+    expect(logger.lines.some((l) => l.msg === 'request')).toBe(false)
     expect((await app.request('/health')).status).toBe(200)
   })
 
   test('readiness waits for every migration this build ships with', async () => {
     const shipped = await createReadinessCheck(t.db)()
     expect(shipped).toEqual({ ok: true })
-    const ahead = createReadinessCheck(t.db, { migrations: ['20991231000000_from_the_future'] })
+    const ahead = createReadinessCheck(t.db, {
+      migrations: () => [...shippedMigrations(), '20991231000000_from_the_future'],
+    })
     expect(await ahead()).toEqual({ ok: false, reason: 'migrations pending' })
+  })
+
+  test('readiness asks the database at most once per cacheMs', async () => {
+    let asked = 0
+    const check = createReadinessCheck(t.db, {
+      cacheMs: 200,
+      migrations: () => (asked++, shippedMigrations()),
+    })
+    await Promise.all(Array.from({ length: 20 }, () => check()))
+    await check()
+    expect(asked).toBe(1)
+    await Bun.sleep(250)
+    await check()
+    expect(asked).toBe(2)
   })
 
   test('readiness says migrations are pending on a database never migrated', async () => {
