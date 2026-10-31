@@ -35,6 +35,8 @@ export type AppOptions = {
   logger?: Logger
   rateLimitPerMinute?: number
   proxyHops?: number
+  // Aborted when the server starts shutting down: /ready then answers 503 (index.ts)
+  shutdownSignal?: AbortSignal
 }
 
 export function createApp({
@@ -43,6 +45,7 @@ export function createApp({
   logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT }),
   rateLimitPerMinute = env.RATE_LIMIT_PER_MINUTE,
   proxyHops = env.TRUSTED_PROXY_HOPS,
+  shutdownSignal,
 }: AppOptions) {
   const auth = createAuth({ db, mailer })
   const services = createServices(db)
@@ -207,10 +210,12 @@ export function createApp({
   // Routes chained here make up AppType, the contract the RPC client sees.
   // /health is liveness: the process answers, nothing else is checked, so a database outage
   // never gets the server restarted. /ready is readiness, for routing traffic: 503 until the
-  // database answers and has every migration this build ships with (db/readiness.ts).
+  // database answers and has every migration this build ships with (db/readiness.ts), and
+  // again from the moment shutdown starts.
   const routes = app
     .get('/health', (c) => c.json({ ok: true }))
     .get('/ready', async (c) => {
+      if (shutdownSignal?.aborted) return c.json({ ok: false, reason: 'shutting down' }, 503)
       const result = await readiness()
       return result.ok ? c.json(result, 200) : c.json(result, 503)
     })

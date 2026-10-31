@@ -42,6 +42,14 @@ describe('parseEnv', () => {
     expect(parseEnv({ ...secret, MIGRATE_ON_START: 'maybe' }).success).toBe(false)
   })
 
+  test('SHUTDOWN_GRACE_MS defaults to 8 s, an empty value included', () => {
+    for (const value of [undefined, '']) {
+      const result = parseEnv({ ...secret, SHUTDOWN_GRACE_MS: value })
+      if (!result.success) throw new Error(result.error)
+      expect(result.data.SHUTDOWN_GRACE_MS).toBe(8_000)
+    }
+  })
+
   test('development keeps its defaults and readable logs', () => {
     const result = parseEnv({ ...secret })
     if (!result.success) throw new Error(result.error)

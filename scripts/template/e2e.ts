@@ -133,10 +133,10 @@ try {
   check((await git('status', '--porcelain')) === '', 'app build output is ignored by git')
 
   // 6. The API runs against the database setup made
-  // apps/api's `start` script, run directly: through `bun run` it would be a grandchild
-  // that outlives kill()
-  server = Bun.spawn(['bun', '--env-file=../../.env.local', 'src/index.ts'], {
-    cwd: join(dir, 'apps/api'),
+  // The root `start` script with the dev env, run directly: through `bun run` it would be
+  // a grandchild that outlives kill()
+  server = Bun.spawn(['bun', '--env-file=.env.local', 'apps/api/src/index.ts'], {
+    cwd: dir,
     stdout: 'ignore',
     stderr: 'inherit',
   })
@@ -163,6 +163,10 @@ try {
   const tasks = await fetch(`${api}/tasks`, { headers: { authorization: `Bearer ${token}` } })
   const body = JSON.stringify(await tasks.json())
   check(tasks.ok && body.includes('Demo task 10'), 'demo user sees the demo tasks')
+
+  // 7. SIGTERM, as a container platform sends it, stops the API cleanly
+  server.kill('SIGTERM')
+  check((await server.exited) === 0, 'API exits cleanly on SIGTERM')
 } catch (err) {
   failures.push(String(err))
 } finally {

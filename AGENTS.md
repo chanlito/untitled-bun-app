@@ -44,6 +44,8 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 - Production refuses to start without `API_URL`, `APP_URL` and `DATABASE_URL` (`parseEnv` in `src/env.ts`).
 - `/health` is liveness (no dependencies), `/ready` is readiness: 503 until the database answers and has every migration in `apps/api/drizzle/` (`src/db/readiness.ts`). Add a dependency the API can't serve without to `/ready`, never to `/health`.
 - Production doesn't migrate on boot, so replicas never race: `bun run db:migrate` runs once per release, before the new version takes traffic (it works with plain env too: the missing `.env.local` is skipped). `MIGRATE_ON_START=true` brings boot migrations back for a single instance. Write migrations the version still running can live with.
+- The production image is the root `Dockerfile` (CI builds it and runs it against Postgres); `docs/deploying.md` covers release and runtime. Keep its `ARG BUN_VERSION` equal to `.bun-version`. `bun run start` runs the same server without Docker.
+- On SIGTERM `index.ts` fails `/ready`, drains requests for `SHUTDOWN_GRACE_MS`, then closes what it opened (`createShutdown`'s `close`): close anything new you open at startup there too.
 
 ## Traps we already hit
 

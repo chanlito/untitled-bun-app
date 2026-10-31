@@ -1,0 +1,13 @@
+# Only what the image needs: no dependencies from the host, no secrets, no git history
+**/node_modules
+**/dist
+.git
+.env
+.env.*
+!.env.example
+.claude
+.agents
+.github
+docs
+coverage
+*.log

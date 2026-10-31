@@ -10,6 +10,8 @@ const TEST_SECRET = 'test-only-secret-never-used-outside-bun-test'
 // deploy that forgets one fails to start instead of pointing at localhost
 const REQUIRED_IN_PRODUCTION = ['API_URL', 'APP_URL', 'DATABASE_URL'] as const
 
+const unsetIfEmpty = (value: unknown) => (value === '' ? undefined : value)
+
 const Env = z.object({
   NODE_ENV,
   PORT: z.coerce.number().int().positive().default(3141),
@@ -40,7 +42,13 @@ const Env = z.object({
   // together don't race; set it to true for a single instance that should migrate itself.
   // /ready answers 503 while any migration is pending, so traffic waits for it either way.
   // An empty value means unset, as with the other keys .env files list without a value
-  MIGRATE_ON_START: z.preprocess((v) => (v === '' ? undefined : v), z.stringbool().optional()),
+  MIGRATE_ON_START: z.preprocess(unsetIfEmpty, z.stringbool().optional()),
+  // How long a shutdown (SIGTERM) waits for requests in flight before cutting them. Keep it
+  // under the platform's own grace period (docker stop: 10 s, Kubernetes: 30 s).
+  SHUTDOWN_GRACE_MS: z.preprocess(
+    unsetIfEmpty,
+    z.coerce.number().int().nonnegative().default(8_000),
+  ),
 })
 
 export type Env = z.infer<typeof Env>

@@ -65,3 +65,47 @@ jobs:
 
       - name: Lint
         run: bun lint --max-warnings 0
+
+  # The production image: it builds, migrates an empty database, reports ready, and stops
+  # cleanly on SIGTERM, the way a container platform runs it (see docs/deploying.md)
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app # CI only
+          POSTGRES_DB: app
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U app -h 127.0.0.1"
+          --health-interval 2s --health-timeout 3s --health-retries 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Dockerfile's Bun matches .bun-version
+        run: |
+          grep -qx "ARG BUN_VERSION=$(cat .bun-version)" Dockerfile ||
+            { echo "::error file=Dockerfile::ARG BUN_VERSION must equal .bun-version"; exit 1; }
+
+      - name: Build
+        run: docker build -t api .
+
+      - name: Migrate, serve, stop
+        run: |
+          cat > prod.env <<ENV
+          DATABASE_URL=postgres://app:app@127.0.0.1:5432/app
+          API_URL=http://localhost:3141
+          APP_URL=http://localhost:3142
+          BETTER_AUTH_SECRET=$(openssl rand -hex 32)
+          ENV
+          docker run --rm --network host --env-file prod.env api bun run db:migrate
+          docker run -d --name api --network host --env-file prod.env api
+          for i in $(seq 30); do curl -sf localhost:3141/ready && break; sleep 1; done
+          curl -sf localhost:3141/ready
+          docker stop api
+          docker logs api
+          test "$(docker inspect -f '{{.State.ExitCode}}' api)" = 0
+          docker logs api | grep -q '"msg":"stopped"'
