@@ -19,7 +19,7 @@ In the commands below, `$SKILL` is this skill's folder (for example `.claude/ski
 bun $SKILL/scripts/risk.ts
 ```
 
-It compares the branch with the base (`origin/main` unless `skills.config.json` says otherwise), lists the files that set the tier, and names the reviews it gets. The highest tier any file calls for wins.
+It compares the branch with the base (`origin/main` unless `skills.config.ts` says otherwise), lists the files that set the tier, and names the reviews it gets. The highest tier any file calls for wins.
 
 | Tier       | Usually                                                             | Proof                                                                              | Reviews (defaults)                                                   |
 | ---------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -43,16 +43,16 @@ Record what each round found and what was fixed in the PR's Review section. Put 
 
 Before calling the work done, ask what this change taught about risk:
 
-- **The tier was wrong** (a path that should have been High, or a Low that needed review): fix the paths in `skills.config.json` under `tiers`. That's a change to the project, so it goes in the PR.
+- **The tier was wrong** (a path that should have been High, or a Low that needed review): fix the paths in `skills.config.ts` under `tiers`. That's a change to the project, so it goes in the PR.
 - **A review missed something it should have caught**, or a step here was wrong, slow or missing: add a lesson with `bun $SKILL/scripts/lessons.ts add "<what to do>" --pr <number>`.
 - **A person corrected how you rank or review:** add a lesson, in their words.
 - **A lesson is now covered by the config or turned out wrong:** `bun $SKILL/scripts/lessons.ts drop <n>`.
 
-Each lesson is one line about what to do, not the story of what went wrong. Where they're kept depends on `lessons` in `skills.config.json`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). A fix that would help every project belongs upstream, in chanlito/skills.
+Each lesson is one line about what to do, not the story of what went wrong. Where they're kept depends on `lessons` in `skills.config.ts`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). A fix that would help every project belongs upstream, in chanlito/skills.
 
 ## Settings
 
-`skills.config.json` at the repo root, all optional:
+`skills.config.ts` at the repo root, all optional:
 
 - `base`: the branch to compare with.
 - `tiers.high`, `tiers.medium`, `tiers.low`: globs. Anything not Low is Medium; `medium` lifts files that would otherwise be Low.

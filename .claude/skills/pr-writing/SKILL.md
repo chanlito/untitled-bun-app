@@ -23,7 +23,7 @@ Start from an up-to-date base: `git fetch origin main && git switch -c <type>/<w
 bun $SKILL/scripts/check.ts
 ```
 
-It checks the branch name and the commit subjects against the project's format, runs the project's own checks (`checks` in `skills.config.json`, such as format, type-check, tests and build), and prints the risk tier and the preview link. It must end with `✓ Ready to push.` When it fails, fix the cause and run it again. Don't push around it.
+It checks the branch name and the commit subjects against the project's format, runs the project's own checks (`checks` in `skills.config.ts`, such as format, type-check, tests and build), and prints the risk tier and the preview link. It must end with `✓ Ready to push.` When it fails, fix the cause and run it again. Don't push around it.
 
 ## 4. Get the tier and the proof
 
@@ -83,16 +83,16 @@ A one-way door or a wide blast radius is a reason to raise the tier with pr-risk
 
 Before calling the work done, ask what this change taught, and fill in the PR's Skills line with it (or "nothing new"):
 
-- **A bug got past the checks** (the review, the preview or a person found it): make it a check. Add a script or test to the project, show it fails on the old code, and add it to `checks` in `skills.config.json`. If that's too big for this PR, open an issue and add a lesson that links it.
+- **A bug got past the checks** (the review, the preview or a person found it): make it a check. Add a script or test to the project, show it fails on the old code, and add it to `checks` in `skills.config.ts`. If that's too big for this PR, open an issue and add a lesson that links it.
 - **Something cost a retry or a workaround** the next agent will hit too: add a lesson with `bun $SKILL/scripts/lessons.ts add "<what to do>" --pr <number>`.
 - **A person corrected how you work**, in a review or a message: add a lesson, in their words.
 - **A lesson is now handled by a check or a step, or turned out wrong:** `bun $SKILL/scripts/lessons.ts drop <n>`.
 
-Each lesson is one line about what to do, not the story of what went wrong. Where they're kept depends on `lessons` in `skills.config.json`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). With `commit`, `check.ts` fails when a skill has more than `maxLessons` (12), so the oldest have to become a check or a step. Don't edit this skill's own files for a project's lessons: an update replaces them. A fix that would help every project belongs upstream, in chanlito/skills.
+Each lesson is one line about what to do, not the story of what went wrong. Where they're kept depends on `lessons` in `skills.config.ts`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). With `commit`, `check.ts` fails when a skill has more than `maxLessons` (12), so the oldest have to become a check or a step. Don't edit this skill's own files for a project's lessons: an update replaces them. A fix that would help every project belongs upstream, in chanlito/skills.
 
 ## Settings
 
-`skills.config.json` at the repo root, all optional:
+`skills.config.ts` at the repo root, all optional:
 
 - `checks`: commands that must pass, in order, like `["npm run lint", "npm test", "npm run build"]`.
 - `base`: the branch to compare with (`origin/main`).

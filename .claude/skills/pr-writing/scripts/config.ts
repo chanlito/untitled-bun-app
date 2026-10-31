@@ -1,6 +1,7 @@
-// The project's settings for these skills, from skills.config.json at the
-// root of the repo. Every field is optional; what's left out falls back to
-// the defaults below, which suit a plain web project with one language.
+// The project's settings for these skills, from skills.config.ts (or
+// skills.config.json) at the root of the repo. Every field is optional;
+// what's left out falls back to the defaults below, which suit a plain web
+// project with one language.
 //
 // This file is shared by every skill in chanlito/skills. Edit it in shared/
 // and run `bun run sync`, which copies it into each skill's scripts/.
@@ -183,9 +184,16 @@ export const DEFAULTS: Config = {
   },
 };
 
-export const CONFIG_FILE = 'skills.config.json';
-/** The file's old name, still read when the new one isn't there. */
-export const LEGACY_CONFIG_FILE = 'show-your-work.json';
+export const CONFIG_FILE = 'skills.config.ts';
+/**
+ * Where the settings are read from, first found wins: TypeScript (so it can
+ * have comments), JSON, and the file's old name.
+ */
+export const CONFIG_FILES = [
+  CONFIG_FILE,
+  'skills.config.json',
+  'show-your-work.json',
+];
 
 type Plain = Record<string, unknown>;
 const isPlain = (v: unknown): v is Plain =>
@@ -208,13 +216,20 @@ export function root() {
   return top || process.cwd();
 }
 
+/** A .ts config's default export (bun runs it as is), or a .json's contents. */
+function load(file: string): unknown {
+  if (file.endsWith('.json')) return JSON.parse(readFileSync(file, 'utf8'));
+  const mod = require(file);
+  return mod?.default ?? mod;
+}
+
 let cached: Config | undefined;
 export function config(): Config {
   if (cached) return cached;
-  const file = [CONFIG_FILE, LEGACY_CONFIG_FILE]
-    .map((name) => join(root(), name))
-    .find((path) => existsSync(path));
-  const mine = file ? JSON.parse(readFileSync(file, 'utf8')) : undefined;
+  const file = CONFIG_FILES.map((name) => join(root(), name)).find((path) =>
+    existsSync(path),
+  );
+  const mine = file ? load(file) : undefined;
   if (isPlain(mine)) delete mine.$schema;
   return (cached = merge(DEFAULTS, mine));
 }

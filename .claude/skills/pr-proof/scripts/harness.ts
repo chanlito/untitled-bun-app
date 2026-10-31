@@ -1,5 +1,5 @@
 // What page checks share: building the site, serving its build folder the
-// way a static host would (with API calls faked from skills.config.json),
+// way a static host would (with API calls faked from skills.config.ts),
 // listing its pages, and opening them in Chromium. shots.ts uses it, and a
 // project's own page checks can too (see examples/ in chanlito/skills).
 

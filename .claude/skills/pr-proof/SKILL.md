@@ -60,16 +60,16 @@ When the project has a preview deploy, its link goes at the very top of the PR t
 
 Before calling the work done, ask what this change taught about proof:
 
-- **A bug got past the proof** (the review, the preview or a person found it): could a shot have shown it? Then change what you shoot next time (another width, `--click`, dark mode) and add a lesson saying so. If the project needs a new kind of page check, write it as the project's own script next to the code (the harness in `$SKILL/scripts/harness.ts` builds, serves and opens pages for it) and add it to `checks` in `skills.config.json`.
+- **A bug got past the proof** (the review, the preview or a person found it): could a shot have shown it? Then change what you shoot next time (another width, `--click`, dark mode) and add a lesson saying so. If the project needs a new kind of page check, write it as the project's own script next to the code (the harness in `$SKILL/scripts/harness.ts` builds, serves and opens pages for it) and add it to `checks` in `skills.config.ts`.
 - **Something cost a retry or a workaround** the next agent will hit too: add a lesson with `bun $SKILL/scripts/lessons.ts add "<what to do>" --pr <number>`.
 - **A person corrected your proof:** add a lesson, in their words.
 - **A lesson is now handled by a setting, a check or a step, or turned out wrong:** `bun $SKILL/scripts/lessons.ts drop <n>`.
 
-Each lesson is one line about what to do. Where they're kept depends on `lessons` in `skills.config.json`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). Don't edit this skill's own files for a project's lessons: an update replaces them. A fix that would help every project belongs upstream, in chanlito/skills.
+Each lesson is one line about what to do. Where they're kept depends on `lessons` in `skills.config.ts`: in this clone only (`local`, the default), committed and reviewed in PRs (`commit`), or nowhere (`off`). Don't edit this skill's own files for a project's lessons: an update replaces them. A fix that would help every project belongs upstream, in chanlito/skills.
 
 ## Settings
 
-`skills.config.json` at the repo root, all optional:
+`skills.config.ts` at the repo root, all optional:
 
 - `site.build`: the build command (`npm run build`), and `site.dist`: where it writes the pages (`dist`).
 - `site.sources`: what the build reads, to know when to rebuild.
