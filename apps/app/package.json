@@ -1,15 +1,17 @@
 {
-  "name": "@repo/app",
+  "name": "@untitled-bun-app/app",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --env-file=../../.env.local --hot src/server.ts"
+    "dev": "bun --env-file=../../.env.local run serve",
+    "serve": "bun index.html --port=${APP_PORT:-3142} --console",
+    "build": "test -n \"$BUN_PUBLIC_API_URL\" || { echo 'Set BUN_PUBLIC_API_URL to the API URL the app should call' >&2; exit 1; }; bun build index.html --outdir=dist --minify --env='BUN_PUBLIC_*'"
   },
   "dependencies": {
-    "hono": "catalog:"
+    "@untitled-bun-app/client": "workspace:*",
+    "@untitled-bun-app/config": "workspace:*"
   },
   "devDependencies": {
-    "@repo/api": "workspace:*",
     "@types/bun": "catalog:"
   }
 }

@@ -1,4 +1,4 @@
-import { project } from '@project'
+import { config } from '@untitled-bun-app/config'
 
 type IntroOptions = {
   apiUrl: string
@@ -15,7 +15,7 @@ export function apiIntro({ apiUrl, maxBodyBytes, timeoutMs, rateLimitPerMinute }
       ? `Each client IP address can make **${rateLimitPerMinute} requests a minute** to the endpoints in this reference.`
       : 'This deployment has no per-IP request limit.'
 
-  return `How to call the ${project.name} API: getting a credential, the shape of errors, the limits, and the conventions every endpoint shares. The endpoints themselves are listed after this page.
+  return `How to call the ${config.name} API: getting a credential, the shape of errors, the limits, and the conventions every endpoint shares. The endpoints themselves are listed after this page.
 
 Request and response bodies are JSON (\`content-type: application/json\`). An endpoint that needs a credential acts as the user behind it.
 

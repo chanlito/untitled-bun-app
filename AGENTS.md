@@ -1,6 +1,20 @@
 # AGENTS.md
 
-Bun + Hono API template: `apps/api` (Hono, `@hono/zod-openapi`, Drizzle 1.0 RC on Postgres, Better Auth) and `apps/app` (plain HTML calling the API through `hc<AppType>`). Scripts live in the root `package.json`.
+Bun + Hono API template in a Bun workspaces monorepo. Scripts live in the root `package.json`.
+
+- `apps/api`: Hono, `@hono/zod-openapi`, Drizzle 1.0 RC on Postgres, Better Auth.
+- `apps/*`: any number of apps of any kind (web, mobile, desktop, CLI, workers). `apps/app` is a placeholder frontend, deliberately framework-free: `index.html` and one `main.ts` that calls the API. Replace it with React, Vue, Expo or anything else; keep `dev` (reads `APP_PORT`) and `build` (refuses to run without `BUN_PUBLIC_API_URL`, the API URL baked into the bundle) scripts so `bun run dev` and the e2e still work.
+- `packages/config` (`@untitled-bun-app/config`): `project.config.ts`, the project's identity. Every workspace reads it as `import { config } from '@untitled-bun-app/config'` (`config.name`, `config.slug`).
+- `packages/client` (`@untitled-bun-app/client`): the API's typed client, `createClient(baseUrl)`, for every frontend.
+- `packages/shared` (`@untitled-bun-app/shared`): code both sides run, such as validation rules.
+
+## Sharing code between workspaces
+
+- A workspace imports another by its package name, declared in its own `package.json` as `"@untitled-bun-app/x": "workspace:*"` (installs are isolated, so an undeclared import fails). Packages export TypeScript source (`"exports": { ".": "./src/index.ts" }`): no build step.
+- Types from the API: frontends use `@untitled-bun-app/client`, which imports only `type AppType` from `@untitled-bun-app/api`, so no server code reaches a bundle. Never import `@untitled-bun-app/api` values from a frontend.
+- Runtime code: put it in `packages/shared` only if it is safe in a browser (no `db/`, env, Node or Bun APIs). Example: `taskTitle` is the API's request rule (`tasks.schemas.ts` adds OpenAPI docs on top) and the same check a form can run.
+- The scope is the project's slug: init renames `@untitled-bun-app/` in every tracked file, so name new packages under it.
+- A new workspace needs a `tsconfig.json` extending `../../tsconfig.base.json` and an entry in the root `typecheck` script.
 
 ## Getting going
 
@@ -44,9 +58,9 @@ A feature lives in `src/modules/<feature>/`: `*.schemas.ts` (Zod API shapes), `*
 
 ## Template
 
-The project's name lives in `project.config.ts`. While `scripts/template/` exists (the template repo itself), its test fails if the template's name appears outside the files init renames; use `project.name` / `project.slug`.
+The project's name lives in `packages/config/project.config.ts`. While `scripts/template/` exists (the template repo itself), its test fails if the template's name appears outside the files init renames; use `config.name` / `config.slug`.
 
-`bun scripts/template/e2e.ts` makes a new project from the template in a temp folder, runs `bun run setup` in it, then checks the rename and init commit, a second setup changing nothing, `bun run verify`, and the API with demo data and sign-in through Mailpit. The **Template** workflow runs it in CI; run it yourself after touching setup or init (it needs Docker and ports 3141-3145 free). Init deletes `scripts/template/` and `.github/workflows/template.yml`, so nothing outside them may import from `scripts/template/`.
+`bun scripts/template/e2e.ts` makes a new project from the template in a temp folder, runs `bun run setup` in it, then checks the rename and init commit, a second setup changing nothing, `bun run verify`, the app build, and the API with demo data and sign-in through Mailpit. The **Template** workflow runs it in CI; run it yourself after touching setup or init (it needs Docker and ports 3141-3145 free). Init deletes `scripts/template/` and `.github/workflows/template.yml`, so nothing outside them may import from `scripts/template/`.
 
 ## README
 
@@ -60,7 +74,7 @@ Branches are named `<type>/<short-name>` after the work, like `feat/csv-export` 
 
 ## Pull requests
 
-Every change goes through the **pr-writing** and **pr-risks** skills (in `.claude/skills/`) before its PR: `bun .claude/skills/pr-writing/scripts/check.ts` must end with `✓ Ready to push.`, and the PR body comes from `bun .claude/skills/pr-writing/scripts/body.ts`. **pr-proof** (screenshots) is installed but skipped for now: the app has no production build to shoot, so there is no `site` block in the settings yet.
+Every change goes through the **pr-writing** and **pr-risks** skills (in `.claude/skills/`) before its PR: `bun .claude/skills/pr-writing/scripts/check.ts` must end with `✓ Ready to push.`, and the PR body comes from `bun .claude/skills/pr-writing/scripts/body.ts`. **pr-proof** (screenshots) is installed but skipped for now: the app is a placeholder, so there is no `site` block in the settings yet.
 
 - Settings live in `show-your-work.json`: the checks above, gitmoji commits, and the paths that make a change High risk (CI, deps and tooling config, migrations and schema, env, auth, CORS, mail, and the vendored skills themselves, since their scripts run commands).
 - Lessons are committed in `.agents/lessons/`, so cloud agents starting from a fresh clone see them.

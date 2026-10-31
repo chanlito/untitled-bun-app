@@ -3,7 +3,7 @@
 //   bun scripts/template/e2e.ts --keep    leave the project and its containers behind
 // Copies the tracked files into a fresh repo (what "Use this template" does), runs
 // `bun run setup` in it, and checks that the result is renamed, committed, clean, passes
-// `bun run verify`, and serves the API with demo data and working sign-in.
+// `bun run verify`, builds the app, and serves the API with demo data and working sign-in.
 // Lives in scripts/template/, so projects created from the template drop it on init.
 import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -93,8 +93,10 @@ try {
     TEMPLATE_ONLY.every((path) => !tracked.some((f) => f === path || f.startsWith(`${path}/`))),
     'template-only files are gone',
   )
-  const config = await Bun.file(join(dir, 'project.config.ts')).text()
+  const config = await Bun.file(join(dir, 'packages/config/project.config.ts')).text()
   check(config.includes(`'${NAME}'`) && config.includes(`'${SLUG}'`), 'project.config.ts renamed')
+  const manifest = (await Bun.file(join(dir, 'apps/api/package.json')).json()) as { name: string }
+  check(manifest.name === `@${SLUG}/api`, `packages are scoped @${SLUG}/*`)
   const log = (await git('log', '--format=%s')).trim().split('\n')
   check(
     log.length === 2 && log[0] === '🎉 chore: initialize from template',
@@ -115,9 +117,22 @@ try {
   await must(['bun', 'run', 'verify'])
   check(true, 'bun run verify passes')
 
-  // 5. The API runs against the database setup made
+  // 5. The app builds into static files that carry the name and the API's URL
   const env = await readEnv(join(dir, '.env.local'))
   const api = env.get('API_URL')!
+  await must(['bun', '--env-file=.env.local', 'run', '--filter', `@${SLUG}/app`, 'build'])
+  const dist = join(dir, 'apps/app/dist')
+  const bundle = await Promise.all(
+    [...new Bun.Glob('*.js').scanSync(dist)].map((file) => Bun.file(join(dist, file)).text()),
+  )
+  check(
+    existsSync(join(dist, 'index.html')) &&
+      bundle.some((js) => js.includes(NAME) && js.includes(api)),
+    'app builds with the project name and API_URL',
+  )
+  check((await git('status', '--porcelain')) === '', 'app build output is ignored by git')
+
+  // 6. The API runs against the database setup made
   // apps/api's `start` script, run directly: through `bun run` it would be a grandchild
   // that outlives kill()
   server = Bun.spawn(['bun', '--env-file=../../.env.local', 'src/index.ts'], {

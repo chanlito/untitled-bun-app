@@ -1,6 +1,6 @@
 # Untitled Bun App
 
-A Bun + Hono API template: typed routes that generate an OpenAPI spec and docs, a typed RPC client, Drizzle on Postgres, and Better Auth.
+A Bun + Hono API template: typed routes that generate an OpenAPI spec and docs, a typed RPC client, Drizzle on Postgres, and Better Auth. The frontend in `apps/app` is a framework-free placeholder: swap in React, Vue, Expo or whatever you like, and add as many other apps beside it as you need (web, mobile, desktop, CLI, workers), all sharing code through `packages/`.
 
 ## Start a project
 

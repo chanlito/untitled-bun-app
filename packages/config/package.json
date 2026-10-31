@@ -1,0 +1,8 @@
+{
+  "name": "@untitled-bun-app/config",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./project.config.ts"
+  }
+}

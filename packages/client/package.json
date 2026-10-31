@@ -1,0 +1,15 @@
+{
+  "name": "@untitled-bun-app/client",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@untitled-bun-app/api": "workspace:*",
+    "@types/bun": "catalog:"
+  }
+}

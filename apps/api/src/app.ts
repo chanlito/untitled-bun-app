@@ -1,5 +1,5 @@
-import { project } from '@project'
 import { Scalar } from '@scalar/hono-api-reference'
+import { config } from '@untitled-bun-app/config'
 import { rateLimiter } from 'hono-rate-limiter'
 import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
@@ -150,7 +150,7 @@ export function createApp({
   app.doc31('/doc', {
     openapi: '3.1.0',
     info: {
-      title: `${project.name} API`,
+      title: `${config.name} API`,
       version: '0.0.0',
       description: apiIntro({
         apiUrl: env.API_URL,
@@ -166,7 +166,7 @@ export function createApp({
   app.get(
     '/reference',
     Scalar({
-      pageTitle: project.name,
+      pageTitle: config.name,
       // Pinned (as the ESM bundle, not cdn): the hidden footer relies on this release's markup
       bundle: 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.76.4/esm.js',
       showDeveloperTools: 'never',
@@ -174,7 +174,7 @@ export function createApp({
       // Scalar has no option for its footer credit, so hide its link
       customCss: 'a[href*="utm_source=powered-by"] { display: none; }',
       sources: [
-        { url: '/doc', title: project.name },
+        { url: '/doc', title: config.name },
         { url: '/api/auth/open-api/generate-schema', title: 'Auth' },
       ],
     }),
