@@ -25,4 +25,4 @@ const server = Bun.serve({
   idleTimeout: Math.ceil(REQUEST_TIMEOUT_MS / 1000) + 5,
 })
 
-logger.info('API listening', { url: server.url.href, docs: `${server.url.href}reference` })
+logger.info({ url: server.url.href, docs: `${server.url.href}reference` }, 'API listening')

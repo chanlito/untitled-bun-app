@@ -1,6 +1,5 @@
-import { isIP } from 'node:net'
-
 import type { Context } from 'hono'
+import ipaddr from 'ipaddr.js'
 
 type BunServer = { requestIP(req: Request): { address: string } | null }
 
@@ -19,38 +18,25 @@ export function clientIp(c: Context, { proxyHops }: { proxyHops: number }) {
   return parseIp(server?.requestIP?.(c.req.raw)?.address ?? '') ?? 'unknown'
 }
 
-// Strips what proxies wrap around an address (brackets, an IPv4 port, an IPv6 zone),
-// writes IPv6 in its one standard form and unwraps IPv4-mapped IPv6, so one client is
-// always one string. null when it isn't an IP.
+// Strips what proxies wrap around an address (brackets, a port), then lets ipaddr.js
+// validate it, unwrap IPv4-mapped IPv6 and write it in one standard form. null if not an IP.
 export function parseIp(raw: string): string | null {
   let ip = raw.trim()
   const bracketed = /^\[([^\]]+)\](?::\d{1,5})?$/.exec(ip)
   if (bracketed?.[1]) ip = bracketed[1]
   else if (/^[\d.]+:\d{1,5}$/.test(ip)) ip = ip.slice(0, ip.lastIndexOf(':'))
-  if (isIP(ip) === 4) return ip
-  ip = ip.split('%')[0] ?? ''
-  if (isIP(ip) !== 6) return null
-  // The URL parser writes IPv6 the standard way: lowercase, zeros compressed
-  const standard = new URL(`http://[${ip}]`).hostname.slice(1, -1)
-  const mapped = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(standard)
-  if (mapped?.[1] && mapped[2]) {
-    const [hi, lo] = [parseInt(mapped[1], 16), parseInt(mapped[2], 16)]
-    return [hi >> 8, hi & 255, lo >> 8, lo & 255].join('.')
-  }
-  return standard
+  // Dotted IPv4 only: ipaddr.js also accepts legacy spellings such as "1" or "0x7f.1"
+  if (!ipaddr.IPv4.isValidFourPartDecimal(ip) && !ipaddr.IPv6.isValid(ip)) return null
+  const addr = ipaddr.process(ip)
+  if (addr instanceof ipaddr.IPv4) return addr.toString()
+  addr.zoneId = undefined
+  return addr.toRFC5952String()
 }
 
 // The rate-limit key for a parsed IP. An IPv6 client usually holds a whole /64, so it is
 // keyed on that prefix (as Better Auth does); otherwise each new address is a new bucket.
 export function rateLimitKey(ip: string) {
-  if (isIP(ip) !== 6) return ip
-  const [head = '', tail] = ip.toLowerCase().split('::')
-  const left = head ? head.split(':') : []
-  const right = tail ? tail.split(':') : []
-  const zeros = Array<string>(Math.max(0, 8 - left.length - right.length)).fill('0')
-  const groups = tail === undefined ? left : [...left, ...zeros, ...right]
-  return `${groups
-    .slice(0, 4)
-    .map((g) => g.replace(/^0+(?=.)/, ''))
-    .join(':')}::/64`
+  if (!ipaddr.IPv6.isValid(ip)) return ip
+  const prefix = ipaddr.IPv6.parse(ip).parts.slice(0, 4)
+  return `${new ipaddr.IPv6([...prefix, 0, 0, 0, 0]).toRFC5952String()}/64`
 }

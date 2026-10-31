@@ -59,7 +59,7 @@ describe('unhandled errors', () => {
     expect(await res.json()).toEqual({ message: 'Internal server error' })
     const line = own.logger.lines.find((l) => l.msg === 'unhandled error')
     expect(line?.requestId).toBe(res.headers.get('x-request-id'))
-    expect((line?.err as Error).message).toBe('kaboom')
+    expect((line?.err as { message: string }).message).toBe('kaboom')
     await own.close()
   })
 })
@@ -120,10 +120,16 @@ describe('parseIp', () => {
     ['::1', '::1'],
   ])('%p is %p', (raw, ip) => expect(parseIp(raw)).toBe(ip))
 
-  test.each(['', 'unknown', '1:2:3:4:5:6:7:8::9', '1::2::3', '999.1.1.1', '203.0.113.7%x'])(
-    '%p is not an IP',
-    (raw) => expect(parseIp(raw)).toBeNull(),
-  )
+  test.each([
+    '',
+    'unknown',
+    '1:2:3:4:5:6:7:8::9',
+    '1::2::3',
+    '999.1.1.1',
+    '203.0.113.7%x',
+    '1',
+    '0x7f.1',
+  ])('%p is not an IP', (raw) => expect(parseIp(raw)).toBeNull())
 })
 
 describe('rate limit key', () => {
@@ -134,8 +140,8 @@ describe('rate limit key', () => {
   test('IPv6 addresses in one /64 share a key', () => {
     expect(rateLimitKey('2001:db8:0:1::aaaa')).toBe('2001:db8:0:1::/64')
     expect(rateLimitKey('2001:DB8:0000:0001:ffff:1:2:3')).toBe('2001:db8:0:1::/64')
-    expect(rateLimitKey('2001:db8::1')).toBe('2001:db8:0:0::/64')
-    expect(rateLimitKey('::1')).toBe('0:0:0:0::/64')
+    expect(rateLimitKey('2001:db8::1')).toBe('2001:db8::/64')
+    expect(rateLimitKey('::1')).toBe('::/64')
   })
 })
 

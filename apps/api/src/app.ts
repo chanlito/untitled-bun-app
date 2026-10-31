@@ -1,5 +1,6 @@
 import { project } from '@project'
 import { Scalar } from '@scalar/hono-api-reference'
+import { rateLimiter } from 'hono-rate-limiter'
 import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
@@ -11,10 +12,9 @@ import type { Db } from './db/client'
 import { env } from './env'
 import { createAuth } from './lib/auth'
 import { clientIp, rateLimitKey } from './lib/client-ip'
-import { createRouter } from './lib/create-router'
+import { type AppEnv, createRouter } from './lib/create-router'
 import { createLogger, type Logger } from './lib/logger'
 import type { Mailer } from './lib/mailer'
-import { rateLimit } from './lib/rate-limit'
 import { tasksRouter } from './modules/tasks/tasks.index'
 import { createServices } from './services'
 
@@ -57,8 +57,8 @@ export function createApp({
       status: c.res.status,
       durationMs: Math.round(performance.now() - start),
     }
-    if (c.res.status >= 500) logger.error('request', fields)
-    else logger.info('request', fields)
+    if (c.res.status >= 500) logger.error(fields, 'request')
+    else logger.info(fields, 'request')
   })
 
   // Hono's defaults: HSTS, nosniff, frame denial, no referrer leaks, and so on. No CSP:
@@ -83,9 +83,16 @@ export function createApp({
   // Better Auth limits its own routes; everything else is limited here, before any body is
   // read. /health is left out so load balancer probes, all from one address, never trip it.
   // API-key clients count here too, so raise RATE_LIMIT_PER_MINUTE for heavy server-to-server use.
-  const limiter = rateLimit({ max: rateLimitPerMinute, key: (c) => rateLimitKey(c.var.clientIp) })
-  app.use(async (c, next) =>
-    c.req.path === '/health' || c.req.path.startsWith('/api/auth/') ? next() : limiter(c, next),
+  app.use(
+    rateLimiter<AppEnv>({
+      windowMs: 60_000,
+      limit: rateLimitPerMinute,
+      standardHeaders: 'draft-6',
+      keyGenerator: (c) => rateLimitKey(c.var.clientIp),
+      skip: (c) =>
+        rateLimitPerMinute <= 0 || c.req.path === '/health' || c.req.path.startsWith('/api/auth/'),
+      message: { message: 'Too many requests' },
+    }),
   )
 
   app.use(
@@ -113,7 +120,7 @@ export function createApp({
       if (err.res) return err.getResponse()
       return c.json({ message: err.message || 'Request failed' }, err.status)
     }
-    logger.error('unhandled error', { requestId: c.var.requestId, err })
+    logger.error({ requestId: c.var.requestId, err }, 'unhandled error')
     return c.json({ message: 'Internal server error' }, 500)
   })
 
