@@ -1,6 +1,7 @@
 import { isAPIError } from 'better-auth/api'
-import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { createMiddleware } from 'hono/factory'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
+
 import type { AppEnv, AuthedEnv } from './create-router'
 
 // Resolves the user from a session cookie, a bearer token or an x-api-key header

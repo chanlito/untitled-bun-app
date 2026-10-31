@@ -2,6 +2,7 @@ import { project } from '@project'
 import { Scalar } from '@scalar/hono-api-reference'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
+
 import type { Db } from './db/client'
 import { env } from './env'
 import { createAuth } from './lib/auth'

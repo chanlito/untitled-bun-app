@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi'
+
 import { json } from './openapi'
 
 export const ErrorSchema = z.object({ message: z.string() }).openapi('Error')

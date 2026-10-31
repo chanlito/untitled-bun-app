@@ -1,4 +1,5 @@
 import { boolean, index, snakeCase, text, timestamp } from 'drizzle-orm/pg-core'
+
 import { users } from './auth'
 
 export const tasks = snakeCase.table(

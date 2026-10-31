@@ -1,6 +1,7 @@
 import { PGlite } from '@electric-sql/pglite'
 import { drizzle } from 'drizzle-orm/pglite'
 import { migrate } from 'drizzle-orm/pglite/migrator'
+
 import { type Db, migrationsFolder } from '../db/client'
 
 // Booting PGlite and migrating costs ~2 s, so it happens once per `bun test` run.

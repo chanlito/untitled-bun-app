@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+
 import { project } from '@project'
+
 import { createTestApp, type TestApp } from './test/app'
 
 let t: TestApp
