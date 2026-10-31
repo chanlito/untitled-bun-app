@@ -1,69 +1,27 @@
 # Untitled Bun App
 
-A Bun + Hono API template: an OpenAPI spec and Scalar docs generated from typed routes, a typed RPC client, Drizzle on Postgres, and Better Auth, in a Bun workspaces monorepo.
+A Bun + Hono API template: typed routes that generate an OpenAPI spec and docs, a typed RPC client, Drizzle on Postgres, and Better Auth.
 
 ## Start a project
 
+Needs [Bun canary](https://bun.com) (`bun upgrade --canary`) and Docker.
+
 1. Click **Use this template** on GitHub, then clone your new repo.
-2. Run setup. The first run asks for a project name (defaulting to the folder name), optional GitHub OAuth credentials, and whether to load demo data. It renames the project, removes the template-only files and commits that as `🎉 chore: initialize from template`.
+2. Run setup, then start the dev servers:
 
    ```sh
    bun run setup
    bun run dev
    ```
 
-Needs [Bun canary](https://bun.com) (`bun upgrade --canary`, for `bun lint`) and Docker.
+The first setup asks for a project name, renames the project and commits the result. It ends by printing the URLs to open. Running it again is safe.
 
-| Service | URL                             |
-| ------- | ------------------------------- |
-| API     | http://localhost:3141           |
-| Docs    | http://localhost:3141/reference |
-| App     | http://localhost:3142           |
-| Mailpit | http://localhost:3145           |
+## Where to look next
 
-With demo data, sign in as `admin@example.com` or `user@example.com`; the code arrives in Mailpit and in the API's console.
-
-`bun run setup` is safe to run again. In a git worktree it gives that worktree its own database and ports.
-
-## What's inside
-
-```text
-project.config.ts        # the project's name and slug
-apps/
-├── api/                 # Hono + @hono/zod-openapi
-│   ├── drizzle/         # SQL migrations (committed)
-│   └── src/
-│       ├── app.ts       # createApp({ db, mailer }): auth, docs, routes
-│       ├── db/          # Drizzle schema and client
-│       ├── lib/         # auth, mailer, errors, router helpers
-│       ├── modules/     # one folder per feature (tasks)
-│       └── test/        # PGlite test database and factories
-└── app/                 # plain HTML, calls the API with hc<AppType>
-scripts/                 # setup and the dev guard
-docker-compose.yml       # Postgres and Mailpit
-```
-
-- **API docs**: `/doc` is the OpenAPI 3.1 spec built from the route definitions; `/reference` shows it in Scalar next to the auth endpoints.
-- **Auth**: Better Auth with magic links and email codes, optional GitHub login, and cookies, bearer tokens, API keys (`x-api-key`) and JWTs (JWKS at `/api/auth/jwks`). Roles `user` and `admin`.
-- **Production basics**: JSON logs with request ids, secure headers, body size and time limits, per-IP rate limiting, and env checks that refuse localhost defaults in production.
-- **Tests**: `bun test` runs against an in-process Postgres (PGlite), so nothing needs to be running.
-
-## Scripts
-
-| Script                | Does                                                |
-| --------------------- | --------------------------------------------------- |
-| `bun run setup`       | Install, env, Docker services, database, migrations |
-| `bun run dev`         | API and app with hot reload                         |
-| `bun test`            | All tests                                           |
-| `bun run verify`      | Lint, format check, type check and tests, like CI   |
-| `bun lint`            | Lint, type-aware                                    |
-| `bun fmt`             | Format everything                                   |
-| `bun run typecheck`   | `bun check` for each workspace                      |
-| `bun run db:generate` | New migration from schema changes                   |
-| `bun run db:migrate`  | Apply migrations                                    |
-| `bun run db:seed`     | Demo data                                           |
-
-Switching from Postgres to MySQL or SQLite: see [docs/switching-databases.md](docs/switching-databases.md).
+- [AGENTS.md](AGENTS.md): how the code is organized, conventions, and what "done" means (`bun run verify`).
+- [package.json](package.json): the scripts.
+- `/reference` on the running API: the API reference.
+- [docs/](docs/): guides such as switching databases.
 
 ## License
 

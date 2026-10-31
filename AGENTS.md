@@ -48,6 +48,10 @@ The project's name lives in `project.config.ts`. While `scripts/template/` exist
 
 `bun scripts/template/e2e.ts` makes a new project from the template in a temp folder, runs `bun run setup` in it, then checks the rename and init commit, a second setup changing nothing, `bun run verify`, and the API with demo data and sign-in through Mailpit. The **Template** workflow runs it in CI; run it yourself after touching setup or init (it needs Docker and ports 3141-3145 free). Init deletes `scripts/template/` and `.github/workflows/template.yml`, so nothing outside them may import from `scripts/template/`.
 
+## README
+
+Keep `README.md` short: what the template is, how to start a project, and pointers to where details live. Leave out anything that goes stale fast, such as versions, counts, port tables, script lists or file trees; those belong in `package.json`, this file or the code.
+
 ## Branches and commits
 
 Branches are named `<type>/<short-name>` after the work, like `feat/csv-export` or `fix/lint-recursion`, never `claude/*`.
