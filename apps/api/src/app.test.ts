@@ -43,6 +43,17 @@ describe('app', () => {
     expect((await app.request('/health')).status).toBe(200)
   })
 
+  test('GET /ready answers 503 once shutdown starts', async () => {
+    const controller = new AbortController()
+    const app = await createTestApp({ shutdownSignal: controller.signal })
+    expect((await app.app.request('/ready')).status).toBe(200)
+    controller.abort()
+    const res = await app.app.request('/ready')
+    expect(res.status).toBe(503)
+    expect(await res.json()).toEqual({ ok: false, reason: 'shutting down' })
+    await app.close()
+  })
+
   test('readiness waits for every migration this build ships with', async () => {
     const shipped = await createReadinessCheck(t.db)()
     expect(shipped).toEqual({ ok: true })
