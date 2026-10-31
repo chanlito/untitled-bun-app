@@ -1,0 +1,28 @@
+{
+  "name": "untitled-bun-app",
+  "private": true,
+  "type": "module",
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "@hono/zod-openapi": "^1.6.3",
+      "@types/bun": "^1.4.4",
+      "hono": "^4.13.14",
+      "zod": "^4.6.7"
+    }
+  },
+  "scripts": {
+    "dev": "bun run --parallel --filter '@repo/*' dev",
+    "lint": "bun lint --max-warnings 0",
+    "fmt": "bun fmt",
+    "fmt:check": "bun fmt --check",
+    "check": "bun check && bun check -p apps/api && bun check -p apps/app",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:"
+  }
+}

@@ -1,0 +1,38 @@
+# Dev services. Ports sit next to the API (3141) and app (3142).
+name: untitled-bun-app
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    ports: ['3143:5432']
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app # dev only
+      POSTGRES_DB: app
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'app']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  mailpit:
+    image: axllent/mailpit:v1.33.0
+    ports: ['3145:8025'] # web UI and HTTP API
+
+  # Uncomment to try MySQL (see docs/switching-databases.md)
+  # mysql:
+  #   image: mysql:8.4
+  #   ports: ['3144:3306']
+  #   environment:
+  #     MYSQL_USER: app
+  #     MYSQL_PASSWORD: app
+  #     MYSQL_ROOT_PASSWORD: app
+  #     MYSQL_DATABASE: app
+  #   volumes:
+  #     - mysqldata:/var/lib/mysql
+
+volumes:
+  pgdata:
+  # mysqldata:
