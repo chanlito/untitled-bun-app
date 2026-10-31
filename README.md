@@ -5,7 +5,7 @@ A Bun + Hono API template: an OpenAPI spec and Scalar docs generated from typed 
 ## Start a project
 
 1. Click **Use this template** on GitHub, then clone your new repo.
-2. Run setup. The first run asks for a project name (defaulting to the folder name), optional GitHub OAuth credentials, and whether to load demo data. It renames the project, removes the template-only files and commits that as `chore: 🎉 initialize from template`.
+2. Run setup. The first run asks for a project name (defaulting to the folder name), optional GitHub OAuth credentials, and whether to load demo data. It renames the project, removes the template-only files and commits that as `🎉 chore: initialize from template`.
 
    ```sh
    bun run setup

@@ -40,7 +40,7 @@ The project's name lives in `project.config.ts`. While `scripts/template/` exist
 
 ## Commits
 
-`type(scope?): emoji message` with gitmoji emojis, e.g. `feat(api): ✨ add tasks routes`, `fix: 🐛 …`, `docs: 📝 …`. Scopes are free-form.
+`<gitmoji> <type>(<scope>): <message>`, scope optional, e.g. `✨ feat(api): add tasks routes`, `🐛 fix: …`, `📝 docs: …`. Scopes are free-form.
 
 ## Agent skills
 

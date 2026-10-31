@@ -108,6 +108,6 @@ async function rename(name: string, slug: string) {
 export async function commitInit() {
   const paths = [...RENAMED_FILES, 'scripts/template']
   await $`git add -A -- ${paths}`.cwd(root).quiet()
-  await $`git commit -q -m ${'chore: 🎉 initialize from template'} -- ${paths}`.cwd(root).quiet()
-  step('Committed: chore: 🎉 initialize from template')
+  await $`git commit -q -m ${'🎉 chore: initialize from template'} -- ${paths}`.cwd(root).quiet()
+  step('Committed: 🎉 chore: initialize from template')
 }
