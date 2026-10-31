@@ -1,0 +1,40 @@
+name: Template
+
+# Only in the template repo: init deletes this file along with scripts/template/
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: template-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # A new project made from the template: `bun run setup`, then `bun run verify`, then the
+  # API with demo data and sign-in through Mailpit. See scripts/template/e2e.ts.
+  fresh-project:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Canary, as the README asks of new projects: setup refuses to run without `bun lint`
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: canary
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Set up and run a new project
+        run: bun scripts/template/e2e.ts

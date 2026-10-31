@@ -8,6 +8,20 @@ export const root = `${resolve(import.meta.dir, '..')}/`
 export const envLocalPath = `${root}.env.local`
 export const migrationsDir = `${root}apps/api/drizzle`
 
+// The one-time init (scripts/template/init.ts) deletes itself, so setup loads it by path
+// and types it with these. init.ts checks that it still matches TemplateInit.
+export const templateInitPath = `${root}scripts/template/init.ts`
+export type InitAnswers = {
+  name: string
+  github: { clientId: string; clientSecret: string }
+  demoData: boolean
+}
+export type TemplateInit = {
+  isTemplateRepo(): Promise<boolean>
+  runInit(options: { name?: string; yes?: boolean }): Promise<InitAnswers>
+  commitInit(): Promise<void>
+}
+
 export const step = (msg: string) => console.log(`✓ ${msg}`)
 export const fail = (msg: string): never => {
   console.error(`✗ ${msg}`)

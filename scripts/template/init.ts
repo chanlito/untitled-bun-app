@@ -5,7 +5,7 @@ import { basename } from 'node:path'
 
 import { $ } from 'bun'
 
-import { fail, root, step } from '../lib'
+import { fail, type InitAnswers, root, step, type TemplateInit } from '../lib'
 
 export const TEMPLATE = {
   repo: 'chanlito/untitled-bun-app',
@@ -22,18 +22,15 @@ export const RENAMED_FILES = [
   'bun.lock',
 ]
 
+// Only the template repo needs these: init deletes them (see e2e.ts for what they test)
+export const TEMPLATE_ONLY = ['scripts/template', '.github/workflows/template.yml']
+
 // Exactly the template's repo (https or ssh), not one whose name merely starts with it
 export const isTemplateRemote = (origin: string) =>
   new RegExp(`[/:]${TEMPLATE.repo}(\\.git)?/?$`).test(origin.trim())
 
 export async function isTemplateRepo() {
   return isTemplateRemote(await $`git remote get-url origin`.cwd(root).quiet().nothrow().text())
-}
-
-export type InitAnswers = {
-  name: string
-  github: { clientId: string; clientSecret: string }
-  demoData: boolean
 }
 
 export function slugify(name: string) {
@@ -79,8 +76,8 @@ export async function runInit({ name, yes }: { name?: string; yes?: boolean }) {
   await rename(finalName, slug)
   step(`Renamed to "${finalName}" (${RENAMED_FILES.join(', ')})`)
 
-  rmSync(`${root}scripts/template`, { recursive: true, force: true })
-  step('Removed template-only files (scripts/template/)')
+  for (const path of TEMPLATE_ONLY) rmSync(`${root}${path}`, { recursive: true, force: true })
+  step(`Removed template-only files (${TEMPLATE_ONLY.join(', ')})`)
 
   return { name: finalName, github: { clientId, clientSecret }, demoData } satisfies InitAnswers
 }
@@ -108,8 +105,11 @@ async function rename(name: string, slug: string) {
 // Commits exactly what init changed, leaving any other work in the tree alone.
 // Setup calls it right after runInit, before anything else can fail.
 export async function commitInit() {
-  const paths = [...RENAMED_FILES, 'scripts/template']
+  const paths = [...RENAMED_FILES, ...TEMPLATE_ONLY]
   await $`git add -A -- ${paths}`.cwd(root).quiet()
   await $`git commit -q -m ${'🎉 chore: initialize from template'} -- ${paths}`.cwd(root).quiet()
   step('Committed: 🎉 chore: initialize from template')
 }
+
+// setup.ts can't import this file statically, so this is where its types are checked
+void ({ isTemplateRepo, runInit, commitInit } satisfies TemplateInit)

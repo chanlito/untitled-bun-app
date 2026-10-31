@@ -14,12 +14,15 @@ import { project } from '../project.config'
 import {
   envLocalPath,
   fail,
+  type InitAnswers,
   isWorktree,
   migrationStatus,
   readEnv,
   root,
   setEnv,
   step,
+  type TemplateInit,
+  templateInitPath,
   worktreePaths,
 } from './lib'
 
@@ -46,11 +49,13 @@ if ((await $`bun lint --help`.cwd(tmpdir()).quiet().nothrow()).exitCode !== 0) {
 if (!Bun.which('docker')) fail('Docker is required for Postgres and Mailpit')
 
 // Phase 1: one-time init, only for a new project made from the template
-let init: Awaited<ReturnType<typeof import('./template/init').runInit>> | undefined
+let init: InitAnswers | undefined
 let projectName: string = project.name
 
-if (existsSync(`${root}scripts/template`)) {
-  const template = await import('./template/init')
+if (existsSync(templateInitPath)) {
+  // Loaded by path, not by a static specifier: init deletes the file, and a project made
+  // from the template must still type-check without it
+  const template = (await import(templateInitPath)) as TemplateInit
   if (args.template || (await template.isTemplateRepo())) {
     if (args.name) fail('This is the template repo itself: it is never renamed')
   } else if (worktree) {
