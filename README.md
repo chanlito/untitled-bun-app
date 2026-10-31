@@ -14,11 +14,11 @@ Needs [Bun canary](https://bun.com) (`bun upgrade --canary`) and Docker.
    bun run dev
    ```
 
-The first setup asks for a project name, renames the project and commits the result. It ends by printing the URLs for the API, its docs and Mailpit. Running it again is safe.
+The first setup asks for a project name, renames the project and commits the result. It ends by printing the URLs to open. Running it again is safe.
 
 ## Where to look next
 
-- [AGENTS.md](AGENTS.md): how the code is laid out, conventions, and what "done" means (`bun run verify`).
+- [AGENTS.md](AGENTS.md): how the code is organized, conventions, and what "done" means (`bun run verify`).
 - [package.json](package.json): the scripts.
 - `/reference` on the running API: the API reference.
 - [docs/](docs/): guides such as switching databases.
