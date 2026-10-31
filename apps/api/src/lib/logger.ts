@@ -15,39 +15,55 @@ export interface Logger {
 
 const RANK = { debug: 10, info: 20, warn: 30, error: 40, silent: Infinity } as const
 
-// Errors don't survive JSON.stringify, so log what's useful from them: the `code` and the
-// cause (Drizzle wraps the Postgres error as the cause). Other fields, such as a failed
-// query's params, are left out: they can hold user data.
+// Errors don't survive JSON.stringify, so log what's useful from them: the cause (Drizzle
+// wraps the Postgres error as the cause) and Postgres's diagnostic fields. A failed
+// query's params are left out, as fields and from Drizzle's message: they hold user data.
+const DIAGNOSTICS = ['code', 'constraint', 'table', 'column', 'schema'] as const
+
 function serialise(value: unknown, depth = 0): unknown {
   if (!(value instanceof Error)) return value
-  const { name, message, stack, cause } = value
-  const code = (value as { code?: unknown }).code
+  const { name, stack, cause } = value
+  const message = value.message.split('\nparams:')[0]
+  const fields = value as unknown as Record<string, unknown>
+  const diagnostics = DIAGNOSTICS.flatMap((k) =>
+    typeof fields[k] === 'string' || typeof fields[k] === 'number' ? [[k, fields[k]]] : [],
+  )
   return {
     name,
     message,
-    stack,
-    ...(typeof code === 'string' || typeof code === 'number' ? { code } : {}),
-    ...(cause !== undefined && depth < 5 ? { cause: serialise(cause, depth + 1) } : {}),
+    stack: stack?.replace(value.message, message ?? ''),
+    ...Object.fromEntries(diagnostics),
+    ...(cause instanceof Error && depth < 5 ? { cause: serialise(cause, depth + 1) } : {}),
   }
 }
 
-// Never throws: a BigInt or a circular object becomes a string instead of failing the log
+// Never throws and always returns a string: BigInts become strings, a repeated or
+// circular object becomes "[Circular]", and undefined or a function becomes its name
 function stringify(value: unknown) {
-  try {
-    return JSON.stringify(value, (_k, v: unknown) => (typeof v === 'bigint' ? v.toString() : v))
-  } catch {
-    return JSON.stringify(String(value))
-  }
+  const seen = new WeakSet<object>()
+  const json = JSON.stringify(value, (_k, v: unknown) => {
+    if (typeof v === 'bigint') return v.toString()
+    if (typeof v === 'object' && v !== null) {
+      if (seen.has(v)) return '[Circular]'
+      seen.add(v)
+    }
+    return v
+  }) as string | undefined
+  return json ?? String(value)
 }
 
-// JSON leaves these as they are, but some viewers break lines on them
-const escapeSeparators = (s: string) =>
-  s.replace(/[\u0085\u2028\u2029]/g, (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, '0')}`)
+// JSON leaves C1 controls and the Unicode line separators as they are, but terminals act
+// on some and some viewers break lines on others
+const escapeControls = (s: string) =>
+  s.replace(
+    /[\u0080-\u009f\u2028\u2029]/g,
+    (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  )
 
 // Pretty lines print plain values bare and quote anything else, so a value with a newline
 // (a decoded request path) can't start a fake log line
 const pretty = (v: unknown) =>
-  typeof v === 'string' && /^[\w./:@+-]*$/.test(v) ? v : escapeSeparators(stringify(v))
+  typeof v === 'string' && /^[\w./:@+-]*$/.test(v) ? v : escapeControls(stringify(v))
 
 export function createLogger({
   level = 'info',

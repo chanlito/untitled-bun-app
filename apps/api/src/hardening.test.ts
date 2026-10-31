@@ -112,10 +112,13 @@ describe('parseIp', () => {
     ['[2001:db8::1]:443', '2001:db8::1'],
     ['2001:DB8::1%eth0', '2001:db8::1'],
     ['::ffff:203.0.113.7', '203.0.113.7'],
+    ['::ffff:cb00:7107', '203.0.113.7'],
+    ['0:0:0:0:0:ffff:203.0.113.7', '203.0.113.7'],
+    ['2001:0db8:0:0:0:0:0:1', '2001:db8::1'],
     ['::1', '::1'],
   ])('%p is %p', (raw, ip) => expect(parseIp(raw)).toBe(ip))
 
-  test.each(['', 'unknown', '1:2:3:4:5:6:7:8::9', '1::2::3', '999.1.1.1'])(
+  test.each(['', 'unknown', '1:2:3:4:5:6:7:8::9', '1::2::3', '999.1.1.1', '203.0.113.7%x'])(
     '%p is not an IP',
     (raw) => expect(parseIp(raw)).toBeNull(),
   )
@@ -151,7 +154,7 @@ describe('on a real server', () => {
           ctl.close()
         },
       })
-      const res = await fetch(new URL('/ip', server.url), {
+      const res = await fetch(`http://127.0.0.1:${server.port}/ip`, {
         method: 'POST',
         body,
         duplex: 'half',

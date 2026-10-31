@@ -36,15 +36,41 @@ describe('logger', () => {
     const circular: Record<string, unknown> = {}
     circular.self = circular
     logger.error('odd', { n: 1n })
-    logger.error('odder', { circular })
+    logger.error('odder', { requestId: 'r1', circular })
     expect(JSON.parse(out[0]!.line)).toMatchObject({ n: '1' })
-    expect(out).toHaveLength(2)
+    expect(JSON.parse(out[1]!.line)).toMatchObject({
+      msg: 'odder',
+      requestId: 'r1',
+      circular: { self: '[Circular]' },
+    })
+  })
+
+  test('pretty prints undefined and functions instead of throwing', () => {
+    const { logger, out } = capture({})
+    logger.info('x', { a: undefined, f: () => 1 })
+    expect(out).toHaveLength(1)
+  })
+
+  test("a failed query's params stay out of the log", () => {
+    const { logger, out } = capture({ format: 'json' })
+    const pg = Object.assign(new Error('duplicate key'), {
+      code: '23505',
+      constraint: 'users_email_key',
+    })
+    const err = new Error('Failed query: insert into users\nparams: alice@example.com', {
+      cause: pg,
+    })
+    logger.error('failed', { err })
+    expect(out[0]!.line).not.toContain('alice@example.com')
+    expect(JSON.parse(out[0]!.line)).toMatchObject({
+      err: { message: 'Failed query: insert into users', cause: { constraint: 'users_email_key' } },
+    })
   })
 
   test('pretty escapes Unicode line separators', () => {
     const { logger, out } = capture({})
-    logger.info('request', { path: '/x\u2028ERROR forged' })
-    expect(out[0]!.line).not.toContain('\u2028')
+    logger.info('request', { path: '/x\u2028ERROR\u009b2J forged' })
+    expect(out[0]!.line).not.toMatch(/[\u2028\u009b]/)
   })
 
   test('drops lines below its level', () => {
