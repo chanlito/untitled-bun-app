@@ -9,18 +9,32 @@ const logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT })
 
 // Signal handlers come first: in a container the server is PID 1, which ignores a signal it
 // has no handler for, so a SIGTERM during startup would wait out the platform's kill timer.
-// Before the server listens there is nothing to drain, so a signal just exits. Repeats join
-// the shutdown already running (`bun run` forwards Ctrl-C, so one press arrives twice).
-// `bun --hot` runs this file again on each change: the handlers are added once and call the
-// shutdown of the latest run.
-type Running = { shutdown?: (reason: string) => Promise<void>; listening?: boolean }
+// Before the server listens there is nothing to drain: a signal exits at once, as
+// interrupted (128 + the signal's number). A repeat within a second joins the shutdown
+// already running (`bun run` forwards Ctrl-C, so one press arrives twice); a later one
+// quits without waiting. `bun --hot` runs this file again on each change, so the handlers
+// are added once and call the shutdown of the latest run.
+type Running = {
+  shutdown?: (reason: string) => Promise<void>
+  listening?: boolean
+  stoppingSince?: number
+}
 const running = ((globalThis as { __api?: Running }).__api ??= {})
 running.shutdown = undefined
 if (!running.listening) {
   running.listening = true
-  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  for (const [signal, code] of [
+    ['SIGTERM', 143],
+    ['SIGINT', 130],
+  ] as const) {
     process.on(signal, () => {
-      if (!running.shutdown) process.exit(0)
+      if (!running.shutdown) process.exit(code)
+      const now = performance.now()
+      if (running.stoppingSince !== undefined && now - running.stoppingSince > 1_000) {
+        logger.warn({ signal }, 'second signal: quitting without waiting')
+        process.exit(code)
+      }
+      running.stoppingSince ??= now
       running.shutdown(signal).then(
         () => process.exit(0),
         (err: unknown) => {

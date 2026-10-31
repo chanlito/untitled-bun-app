@@ -42,12 +42,14 @@ describe('parseEnv', () => {
     expect(parseEnv({ ...secret, MIGRATE_ON_START: 'maybe' }).success).toBe(false)
   })
 
-  test('SHUTDOWN_GRACE_MS defaults to 8 s, an empty value included', () => {
+  test('shutdown timings: no delay and 8 s of grace by default, an empty value included', () => {
     for (const value of [undefined, '']) {
-      const result = parseEnv({ ...secret, SHUTDOWN_GRACE_MS: value })
+      const result = parseEnv({ ...secret, SHUTDOWN_DELAY_MS: value, SHUTDOWN_GRACE_MS: value })
       if (!result.success) throw new Error(result.error)
-      expect(result.data.SHUTDOWN_GRACE_MS).toBe(8_000)
+      expect(result.data).toMatchObject({ SHUTDOWN_DELAY_MS: 0, SHUTDOWN_GRACE_MS: 8_000 })
     }
+    expect(parseEnv({ ...secret, SHUTDOWN_DELAY_MS: '60001' }).success).toBe(false)
+    expect(parseEnv({ ...secret, SHUTDOWN_GRACE_MS: String(2 ** 31) }).success).toBe(false)
   })
 
   test('development keeps its defaults and readable logs', () => {

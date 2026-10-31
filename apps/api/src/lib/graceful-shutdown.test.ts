@@ -68,20 +68,21 @@ describe('graceful shutdown', () => {
     )
   })
 
-  test('with delayMs, keeps serving after /ready fails, then stops', async () => {
+  test('with delayMs, keeps serving after /ready fails, and only then starts the grace', async () => {
     const server = slowServer(0)
     const controller = new AbortController()
-    const shutdown = createShutdown({
-      server,
-      controller,
-      logger: createMemoryLogger(),
-      delayMs: 200,
-      graceMs: 1_000,
-    })
+    const logger = createMemoryLogger()
+    const shutdown = createShutdown({ server, controller, logger, delayMs: 300, graceMs: 50 })
+    const start = performance.now()
     const done = shutdown('SIGTERM')
     expect(controller.signal.aborted).toBe(true)
     expect((await fetch(server.url)).ok).toBe(true)
     await done
+    expect(performance.now() - start).toBeGreaterThanOrEqual(290)
+    // The grace (50 ms) counted from the stop, not the signal: nothing was cut
+    expect(logger.lines.map((l) => l.msg)).not.toContain(
+      'requests still running after the grace period; closing them',
+    )
     expect(await fetch(server.url).catch((err: { code: string }) => err.code)).toBe('ECONNREFUSED')
   })
 
