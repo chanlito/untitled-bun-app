@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
+
 import { $ } from 'bun'
 
 // import.meta.dir is a decoded path, so checkouts under folders with spaces work

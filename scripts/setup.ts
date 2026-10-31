@@ -7,7 +7,9 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename } from 'node:path'
 import { parseArgs } from 'node:util'
+
 import { $ } from 'bun'
+
 import { project } from '../project.config'
 import {
   envLocalPath,

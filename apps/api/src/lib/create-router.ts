@@ -1,4 +1,5 @@
 import { OpenAPIHono } from '@hono/zod-openapi'
+
 import type { Services } from '../services'
 import type { Auth } from './auth'
 

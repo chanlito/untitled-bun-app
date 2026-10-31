@@ -1,5 +1,6 @@
-import type { Context } from 'hono'
 import { isIP } from 'node:net'
+
+import type { Context } from 'hono'
 
 type BunServer = { requestIP(req: Request): { address: string } | null }
 

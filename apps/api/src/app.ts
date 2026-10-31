@@ -6,6 +6,7 @@ import { HTTPException } from 'hono/http-exception'
 import { requestId } from 'hono/request-id'
 import { secureHeaders } from 'hono/secure-headers'
 import { timeout } from 'hono/timeout'
+
 import type { Db } from './db/client'
 import { env } from './env'
 import { createAuth } from './lib/auth'

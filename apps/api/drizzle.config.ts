@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+
 import { defineConfig } from 'drizzle-kit'
 
 // drizzle-kit doesn't load the root .env.local, so read this checkout's DATABASE_URL

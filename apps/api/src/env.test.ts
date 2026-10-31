@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+
 import { parseEnv } from './env'
 
 const secret = { BETTER_AUTH_SECRET: 'x'.repeat(32) }
