@@ -101,8 +101,9 @@ export const apiKeys = snakeCase.table(
     lastRefillAt: timestamp({ withTimezone: true }),
     enabled: boolean().default(true),
     rateLimitEnabled: boolean().default(true),
-    rateLimitTimeWindow: integer().default(86_400_000),
-    rateLimitMax: integer().default(10),
+    // Match the apiKey({ rateLimit }) config in lib/auth.ts
+    rateLimitTimeWindow: integer().default(60_000),
+    rateLimitMax: integer().default(600),
     requestCount: integer().default(0),
     remaining: integer(),
     lastRequest: timestamp({ withTimezone: true }),

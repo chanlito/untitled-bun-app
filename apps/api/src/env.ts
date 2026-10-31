@@ -10,12 +10,17 @@ const Env = z.object({
   NODE_ENV,
   PORT: z.coerce.number().int().positive().default(3141),
   API_URL: z.url().default('http://localhost:3141'),
-  APP_URL: z.url().default('http://localhost:3142'),
+  // Normalised to an origin: CORS and Better Auth compare it verbatim with the Origin header
+  APP_URL: z
+    .url()
+    .default('http://localhost:3142')
+    .transform((url) => new URL(url).origin),
   DATABASE_URL: z.url().default('postgres://app:app@localhost:3143/app'),
   BETTER_AUTH_SECRET: z.string().min(32),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
-  MAILPIT_URL: z.url().default('http://localhost:3145'),
+  // Development mail catcher; when unset, sending mail fails until a provider is wired in
+  MAILPIT_URL: z.url().optional(),
   MAIL_FROM: z.email().default('no-reply@example.com'),
 })
 

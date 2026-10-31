@@ -122,9 +122,10 @@ Next: bun run dev`)
 // A worktree gets its own database and the next pair of ports that is neither in use
 // nor already handed to another checkout (whose servers may simply not be running)
 async function worktreeEnv(base: Map<string, string>) {
-  const name = basename(root.replace(/\/$/, ''))
+  // Folder name plus a short hash of the full path: same-named folders elsewhere stay apart
+  const name = `${basename(root.replace(/\/$/, ''))
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/[^a-z0-9]+/g, '_')}_${Bun.hash(root).toString(36).slice(0, 6)}`
   const claimed = new Set<number>()
   for (const path of await worktreePaths()) {
     const other = await readEnv(`${path}/.env.local`)

@@ -52,7 +52,12 @@ export function createAuth({ db, mailer }: { db: Db; mailer: Mailer }) {
       }),
       bearer(),
       jwt({ schema: { jwks: { modelName: 'jwks' } } }),
-      apiKey({ enableSessionForAPIKeys: true, schema: { apikey: { modelName: 'apiKeys' } } }),
+      apiKey({
+        enableSessionForAPIKeys: true,
+        // The plugin's default is 10 requests per day, far too low for server-to-server use
+        rateLimit: { enabled: true, timeWindow: 60_000, maxRequests: 600 },
+        schema: { apikey: { modelName: 'apiKeys' } },
+      }),
       admin(),
       openAPI({ disableDefaultReference: true }),
     ],

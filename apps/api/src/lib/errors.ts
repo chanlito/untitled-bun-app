@@ -9,7 +9,8 @@ export const ValidationErrorSchema = ErrorSchema.extend({
 
 // Responses every authenticated route can return
 export const authErrors = {
-  401: json(ErrorSchema, 'Not signed in'),
+  401: json(ErrorSchema, 'Not signed in, or the credential is invalid'),
+  429: json(ErrorSchema, 'API key rate limit exceeded'),
 }
 
 export const validationErrors = {
