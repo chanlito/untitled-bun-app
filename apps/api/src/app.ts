@@ -9,7 +9,7 @@ import { timeout } from 'hono/timeout'
 import type { Db } from './db/client'
 import { env } from './env'
 import { createAuth } from './lib/auth'
-import { clientIp } from './lib/client-ip'
+import { clientIp, rateLimitKey } from './lib/client-ip'
 import { createRouter } from './lib/create-router'
 import { createLogger, type Logger } from './lib/logger'
 import type { Mailer } from './lib/mailer'
@@ -39,7 +39,6 @@ export function createApp({
 }: AppOptions) {
   const auth = createAuth({ db, mailer })
   const services = createServices(db)
-  const ip = (c: Parameters<typeof clientIp>[0]) => clientIp(c, { proxyHops })
 
   const app = createRouter()
 
@@ -73,19 +72,30 @@ export function createApp({
       exposeHeaders: ['set-auth-token', 'set-auth-jwt'],
     }),
   )
+  // Resolved before bodyLimit, which can swap c.req.raw for a copy that Bun's
+  // server.requestIP() no longer knows
+  app.use(async (c, next) => {
+    c.set('clientIp', clientIp(c, { proxyHops }))
+    await next()
+  })
+
+  // Better Auth limits its own routes; everything else is limited here, before any body is
+  // read. /health is left out so load balancer probes, all from one address, never trip it.
+  // API-key clients count here too, so raise RATE_LIMIT_PER_MINUTE for heavy server-to-server use.
+  const limiter = rateLimit({ max: rateLimitPerMinute, key: (c) => rateLimitKey(c.var.clientIp) })
+  app.use(async (c, next) =>
+    c.req.path === '/health' || c.req.path.startsWith('/api/auth/') ? next() : limiter(c, next),
+  )
+
   app.use(
     bodyLimit({
       maxSize: MAX_BODY_BYTES,
       onError: (c) => c.json({ message: 'Request body too large' }, 413),
     }),
   )
-  app.use(timeout(REQUEST_TIMEOUT_MS))
-
-  // Better Auth limits its own routes; everything else is limited here. /health is left
-  // out so load balancer probes, which all come from one address, never trip it.
-  const limiter = rateLimit({ max: rateLimitPerMinute, key: ip })
-  app.use(async (c, next) =>
-    c.req.path === '/health' || c.req.path.startsWith('/api/auth/') ? next() : limiter(c, next),
+  // The 504 doesn't stop the handler: work it started (a DB write) can still finish after
+  app.use(
+    timeout(REQUEST_TIMEOUT_MS, () => new HTTPException(504, { message: 'Request timed out' })),
   )
 
   app.use(async (c, next) => {
@@ -97,11 +107,7 @@ export function createApp({
   app.notFound((c) => c.json({ message: `Not found: ${c.req.path}` }, 404))
 
   app.onError((err, c) => {
-    if (err instanceof HTTPException) {
-      // timeout() throws a bare 504 with an empty message
-      const message = err.message || (err.status === 504 ? 'Request timed out' : 'Error')
-      return c.json({ message }, err.status)
-    }
+    if (err instanceof HTTPException) return c.json({ message: err.message }, err.status)
     logger.error('unhandled error', { requestId: c.var.requestId, err })
     return c.json({ message: 'Internal server error' }, 500)
   })
@@ -110,7 +116,7 @@ export function createApp({
   // alone, set here from our own resolution so a client can't choose it
   app.on(['GET', 'POST'], '/api/auth/*', (c) => {
     const headers = new Headers(c.req.raw.headers)
-    headers.set('x-client-ip', ip(c))
+    headers.set('x-client-ip', c.var.clientIp)
     return auth.handler(new Request(c.req.raw, { headers }))
   })
 

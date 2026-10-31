@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { MAX_BODY_BYTES } from './app'
-import { clientIp } from './lib/client-ip'
+import { clientIp, rateLimitKey } from './lib/client-ip'
 import { createTestApp, type TestApp } from './test/app'
 
 let t: TestApp
@@ -96,5 +96,15 @@ describe('client ip', () => {
 
   test('with two, the entry the outer proxy appended', async () => {
     expect(await (await app(2).request('/', { headers: xff })).text()).toBe('6.6.6.6')
+  })
+})
+
+describe('rate limit key', () => {
+  test('IPv4 is used as is', () => expect(rateLimitKey('203.0.113.7')).toBe('203.0.113.7'))
+
+  test('IPv6 addresses in one /64 share a key', () => {
+    expect(rateLimitKey('2001:db8:0:1::aaaa')).toBe('2001:db8:0:1::/64')
+    expect(rateLimitKey('2001:DB8:0000:0001:ffff:1:2:3')).toBe('2001:db8:0:1::/64')
+    expect(rateLimitKey('2001:db8::1')).toBe('2001:db8:0:0::/64')
   })
 })

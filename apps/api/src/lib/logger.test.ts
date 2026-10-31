@@ -17,6 +17,20 @@ describe('logger', () => {
     expect(out[0]!.isError).toBe(true)
   })
 
+  test("keeps an error's cause, which holds the driver's detail", () => {
+    const { logger, out } = capture({ format: 'json' })
+    const pg = Object.assign(new Error('duplicate key'), { code: '23505' })
+    logger.error('failed', { err: new Error('Failed query', { cause: pg }) })
+    const entry = JSON.parse(out[0]!.line) as { err: { cause: Record<string, unknown> } }
+    expect(entry.err.cause).toMatchObject({ message: 'duplicate key', code: '23505' })
+  })
+
+  test('pretty quotes values that could break the line', () => {
+    const { logger, out } = capture({})
+    logger.info('request', { path: '/x\nERROR forged', status: 404 })
+    expect(out[0]!.line).toBe('INFO  request path="/x\\nERROR forged" status=404')
+  })
+
   test('drops lines below its level', () => {
     const { logger, out } = capture({ level: 'warn' })
     logger.info('quiet')

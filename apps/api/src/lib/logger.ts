@@ -15,12 +15,24 @@ export interface Logger {
 
 const RANK = { debug: 10, info: 20, warn: 30, error: 40, silent: Infinity } as const
 
-// Errors don't survive JSON.stringify, so log what's useful from them
-function serialise(value: unknown): unknown {
-  if (value instanceof Error)
-    return { name: value.name, message: value.message, stack: value.stack }
-  return value
+// Errors don't survive JSON.stringify, so log what's useful from them, causes included:
+// Drizzle wraps the driver's error (the Postgres code and detail) as the cause
+function serialise(value: unknown, depth = 0): unknown {
+  if (!(value instanceof Error)) return value
+  const { name, message, stack, cause } = value
+  return {
+    ...(value as object),
+    name,
+    message,
+    stack,
+    ...(cause !== undefined && depth < 5 ? { cause: serialise(cause, depth + 1) } : {}),
+  }
 }
+
+// Pretty lines print plain values bare and quote anything else, so a value with a newline
+// (a decoded request path) can't start a fake log line
+const pretty = (v: unknown) =>
+  typeof v === 'string' && /^[\w./:@+-]*$/.test(v) ? v : JSON.stringify(v)
 
 export function createLogger({
   level = 'info',
@@ -43,11 +55,9 @@ export function createLogger({
             msg,
             ...Object.fromEntries(entries),
           })
-        : [
-            lvl.toUpperCase().padEnd(5),
-            msg,
-            ...entries.map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`),
-          ].join(' ')
+        : [lvl.toUpperCase().padEnd(5), msg, ...entries.map(([k, v]) => `${k}=${pretty(v)}`)].join(
+            ' ',
+          )
     write(line, RANK[lvl] >= RANK.warn)
   }
   return {

@@ -5,7 +5,7 @@ import type { Auth } from './auth'
 type Session = NonNullable<Awaited<ReturnType<Auth['api']['getSession']>>>
 
 export type AppEnv = {
-  Variables: { auth: Auth; services: Services }
+  Variables: { auth: Auth; services: Services; clientIp: string }
 }
 
 // Routes behind requireUser can read the signed-in user without null checks
