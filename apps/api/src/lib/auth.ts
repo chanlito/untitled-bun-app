@@ -1,5 +1,5 @@
 import { apiKey } from '@better-auth/api-key'
-import { project } from '@untitled-bun-app/config'
+import { config } from '@untitled-bun-app/config'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { admin, bearer, emailOTP, jwt, magicLink, openAPI } from 'better-auth/plugins'
@@ -16,7 +16,7 @@ export function createAuth({ db, mailer }: { db: Db; mailer: Mailer }) {
       : undefined
 
   return betterAuth({
-    appName: project.name,
+    appName: config.name,
     baseURL: env.API_URL,
     basePath: '/api/auth',
     secret: env.BETTER_AUTH_SECRET,
@@ -30,7 +30,7 @@ export function createAuth({ db, mailer }: { db: Db; mailer: Mailer }) {
     account: { modelName: 'accounts' },
     verification: { modelName: 'verifications' },
     advanced: {
-      cookiePrefix: project.slug,
+      cookiePrefix: config.slug,
       // app.ts sets this header from the socket or trusted proxies; never X-Forwarded-For
       ipAddress: { ipAddressHeaders: ['x-client-ip'] },
       database: { generateId: () => Bun.randomUUIDv7() },
@@ -41,7 +41,7 @@ export function createAuth({ db, mailer }: { db: Db; mailer: Mailer }) {
         sendMagicLink: ({ email, url }) =>
           mailer.send({
             to: email,
-            subject: `Sign in to ${project.name}`,
+            subject: `Sign in to ${config.name}`,
             text: `Sign in: ${url}`,
           }),
       }),
@@ -49,7 +49,7 @@ export function createAuth({ db, mailer }: { db: Db; mailer: Mailer }) {
         sendVerificationOTP: ({ email, otp }) =>
           mailer.send({
             to: email,
-            subject: `Your ${project.name} code: ${otp}`,
+            subject: `Your ${config.name} code: ${otp}`,
             text: `Your code is ${otp}`,
           }),
       }),

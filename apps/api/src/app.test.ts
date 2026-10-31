@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 
-import { project } from '@untitled-bun-app/config'
+import { config } from '@untitled-bun-app/config'
 
 import { createTestApp, type TestApp } from './test/app'
 
@@ -25,7 +25,7 @@ describe('app', () => {
     const res = await t.app.request('/doc')
     const spec = (await res.json()) as { openapi: string; info: { title: string } }
     expect(spec.openapi).toBe('3.1.0')
-    expect(spec.info.title).toBe(`${project.name} API`)
+    expect(spec.info.title).toBe(`${config.name} API`)
   })
 
   test('the spec explains itself to outside developers', async () => {

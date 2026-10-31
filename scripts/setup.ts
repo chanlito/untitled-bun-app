@@ -10,7 +10,7 @@ import { parseArgs } from 'node:util'
 
 import { $ } from 'bun'
 
-import { project } from '../packages/config/project.config.ts'
+import { config } from '../packages/config/project.config.ts'
 import {
   envLocalPath,
   fail,
@@ -50,7 +50,7 @@ if (!Bun.which('docker')) fail('Docker is required for Postgres and Mailpit')
 
 // Phase 1: one-time init, only for a new project made from the template
 let init: InitAnswers | undefined
-let projectName: string = project.name
+let projectName: string = config.name
 
 if (existsSync(templateInitPath)) {
   // Loaded by path, not by a static specifier: init deletes the file, and a project made
@@ -71,7 +71,7 @@ if (existsSync(templateInitPath)) {
     projectName = init.name
   }
 } else if (args.name) {
-  fail(`Already initialized as "${project.name}". Renaming is a one-time step.`)
+  fail(`Already initialized as "${config.name}". Renaming is a one-time step.`)
 }
 
 // Phase 2: every run
