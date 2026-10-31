@@ -17,7 +17,7 @@
   "scripts": {
     "setup": "bun scripts/setup.ts",
     "dev": "bun scripts/predev.ts && bun run --parallel --filter '@untitled-bun-app/*' dev",
-    "start": "NODE_ENV=${NODE_ENV:-production} bun apps/api/src/index.ts",
+    "start": "NODE_ENV=production bun apps/api/src/index.ts",
     "typecheck": "bun check && bun check -p apps/api && bun check -p apps/app && bun check -p packages/client && bun check -p packages/config && bun check -p packages/shared",
     "verify": "bun lint --max-warnings 0 && bun fmt --check && bun run typecheck && bun test",
     "test": "bun test",

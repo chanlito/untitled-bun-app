@@ -53,8 +53,7 @@ const Env = z.object({
   // under the platform's own grace period (docker stop: 10 s, Kubernetes: 30 s).
   SHUTDOWN_GRACE_MS: z.preprocess(
     unsetIfEmpty,
-    // setTimeout's limit: past it the timer would fire at once
-    z.coerce.number().int().min(0).max(2_147_483_647).default(8_000),
+    z.coerce.number().int().min(0).max(600_000).default(8_000),
   ),
 })
 

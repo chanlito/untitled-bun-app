@@ -2,43 +2,30 @@ import { createApp, REQUEST_TIMEOUT_MS } from './app'
 import { createDb, migrateDb } from './db/client'
 import { env } from './env'
 import { createShutdown } from './lib/graceful-shutdown'
-import { createLogger } from './lib/logger'
+import { createLogger, type Logger } from './lib/logger'
 import { createMailpitMailer, unconfiguredMailer } from './lib/mailer'
 
 const logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT })
 
 // Signal handlers come first: in a container the server is PID 1, which ignores a signal it
 // has no handler for, so a SIGTERM during startup would wait out the platform's kill timer.
-// Before the server listens there is nothing to drain: a signal exits at once, as
-// interrupted (128 + the signal's number). A repeat within a second joins the shutdown
-// already running (`bun run` forwards Ctrl-C, so one press arrives twice); a later one
-// quits without waiting. `bun --hot` runs this file again on each change, so the handlers
-// are added once and call the shutdown of the latest run.
-type Running = {
-  shutdown?: (reason: string) => Promise<void>
-  listening?: boolean
-  stoppingSince?: number
-}
+// Before the server listens there is nothing to drain, so a signal exits at once. Repeats
+// join the shutdown already running (`bun run` forwards Ctrl-C, so one press arrives twice),
+// which SHUTDOWN_DELAY_MS + SHUTDOWN_GRACE_MS bound. `bun --hot` runs this file again on each
+// change, so the handlers are added once and use the latest run's shutdown and logger.
+type Running = { shutdown?: (reason: string) => Promise<void>; logger?: Logger; listening?: true }
 const running = ((globalThis as { __api?: Running }).__api ??= {})
 running.shutdown = undefined
+running.logger = logger
 if (!running.listening) {
   running.listening = true
-  for (const [signal, code] of [
-    ['SIGTERM', 143],
-    ['SIGINT', 130],
-  ] as const) {
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, () => {
-      if (!running.shutdown) process.exit(code)
-      const now = performance.now()
-      if (running.stoppingSince !== undefined && now - running.stoppingSince > 1_000) {
-        logger.warn({ signal }, 'second signal: quitting without waiting')
-        process.exit(code)
-      }
-      running.stoppingSince ??= now
+      if (!running.shutdown) process.exit(0)
       running.shutdown(signal).then(
         () => process.exit(0),
         (err: unknown) => {
-          logger.error({ err }, 'shutdown failed')
+          running.logger?.error({ err }, 'shutdown failed')
           process.exit(1)
         },
       )

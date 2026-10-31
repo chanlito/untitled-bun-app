@@ -49,7 +49,7 @@ describe('parseEnv', () => {
       expect(result.data).toMatchObject({ SHUTDOWN_DELAY_MS: 0, SHUTDOWN_GRACE_MS: 8_000 })
     }
     expect(parseEnv({ ...secret, SHUTDOWN_DELAY_MS: '60001' }).success).toBe(false)
-    expect(parseEnv({ ...secret, SHUTDOWN_GRACE_MS: String(2 ** 31) }).success).toBe(false)
+    expect(parseEnv({ ...secret, SHUTDOWN_GRACE_MS: '600001' }).success).toBe(false)
   })
 
   test('development keeps its defaults and readable logs', () => {

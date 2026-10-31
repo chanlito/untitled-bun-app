@@ -215,10 +215,9 @@ export function createApp({
   const routes = app
     .get('/health', (c) => c.json({ ok: true }))
     .get('/ready', async (c) => {
-      // Shutdown wins, even when it starts while the check runs
-      const stopping = { ok: false, reason: 'shutting down' } as const
-      const result = shutdownSignal?.aborted ? stopping : await readiness()
-      if (shutdownSignal?.aborted) return c.json(stopping, 503)
+      const result = await readiness()
+      // Checked after the check: shutdown may have started while it ran
+      if (shutdownSignal?.aborted) return c.json({ ok: false, reason: 'shutting down' }, 503)
       return result.ok ? c.json(result, 200) : c.json(result, 503)
     })
     .route('/', tasksRouter)
