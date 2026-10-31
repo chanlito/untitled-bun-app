@@ -39,7 +39,7 @@ bun $SKILL/scripts/body.ts
 It prints the project's PR template (or this skill's `template.md` when there's none) with the preview link and the suggested tier filled in. Fill in the rest. Skip preambles and keep the prose short. Use the project's own words for things (its `GLOSSARY.md` if it has one), not names you made up while working. If the repo's template has other sections, fill them in too; don't drop them.
 
 - **Preview link at the very top**, and in your message about the PR too. People shouldn't have to look for it.
-- **Tier** with its one-line reason, and the label. Raise it if pr-risks says paths can't tell.
+- **Tier:** just the tier, like `**Tier:** High`. The label shows on the PR and the reason is in the config, so don't repeat them. Raise it if pr-risks says paths can't tell.
 - **Summary:** one or two sentences on what someone using it would notice, then the smallest picture that makes the point. Not a list of files.
 - **Evidence:** before and after.
 - **Merge danger:** the door and the blast radius.
