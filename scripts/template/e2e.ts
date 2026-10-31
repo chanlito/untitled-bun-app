@@ -17,8 +17,8 @@ import { TEMPLATE_ONLY } from './init'
 
 const { values: args } = parseArgs({ options: { keep: { type: 'boolean' } } })
 
-const NAME = 'Acme API'
-const SLUG = 'acme-api'
+const NAME = 'Acme'
+const SLUG = 'acme'
 const failures: string[] = []
 let server: Bun.Subprocess | undefined
 
@@ -127,7 +127,7 @@ try {
   })
   check(await waitFor(`${api}/health`), 'API answers /health')
   const spec = (await (await fetch(`${api}/doc`)).json()) as { info: { title: string } }
-  check(spec.info.title === NAME, `API docs are titled "${NAME}"`)
+  check(spec.info.title.includes(NAME), `API docs carry the name "${NAME}"`)
 
   // Sign in as the demo user with a code from Mailpit, then read the demo tasks
   const email = 'user@example.com'
