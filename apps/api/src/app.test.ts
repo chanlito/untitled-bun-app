@@ -1,8 +1,14 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 
 import { config } from '@untitled-bun-app/config'
+import { sql } from 'drizzle-orm'
 
+import { createApp } from './app'
+import { createReadinessCheck } from './db/readiness'
+import { createMemoryLogger } from './lib/logger'
+import { createMemoryMailer } from './lib/mailer'
 import { createTestApp, type TestApp } from './test/app'
+import { createTestDb } from './test/db'
 
 let t: TestApp
 beforeAll(async () => (t = await createTestApp()))
@@ -13,6 +19,39 @@ describe('app', () => {
     const res = await t.client.health.$get()
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ ok: true })
+  })
+
+  test('GET /ready answers 200 on a migrated database, and passing probes stay out of the log', async () => {
+    const res = await t.client.ready.$get()
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true })
+    expect(t.logger.lines.some((l) => l.path === '/ready')).toBe(false)
+  })
+
+  test('GET /ready answers 503 when the database is gone; /health still 200', async () => {
+    const { db, close } = await createTestDb()
+    const logger = createMemoryLogger()
+    const app = createApp({ db, mailer: createMemoryMailer(), logger })
+    await close()
+    const res = await app.request('/ready')
+    expect(res.status).toBe(503)
+    expect(await res.json()).toEqual({ ok: false, reason: 'database unavailable' })
+    expect(logger.lines.map((l) => l.msg)).toContain('not ready')
+    expect((await app.request('/health')).status).toBe(200)
+  })
+
+  test('readiness waits for every migration this build ships with', async () => {
+    const shipped = await createReadinessCheck(t.db)()
+    expect(shipped).toEqual({ ok: true })
+    const ahead = createReadinessCheck(t.db, { migrations: ['20991231000000_from_the_future'] })
+    expect(await ahead()).toEqual({ ok: false, reason: 'migrations pending' })
+  })
+
+  test('readiness says migrations are pending on a database never migrated', async () => {
+    const { db, close } = await createTestDb()
+    await db.execute(sql`drop schema drizzle cascade`)
+    expect(await createReadinessCheck(db)()).toEqual({ ok: false, reason: 'migrations pending' })
+    await close()
   })
 
   test('GET / gives API clients the links as JSON', async () => {

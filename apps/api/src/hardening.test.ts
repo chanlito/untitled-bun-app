@@ -12,13 +12,13 @@ afterAll(() => t.close())
 
 describe('request ids and logs', () => {
   test('every response carries an X-Request-Id, and its request is logged with it', async () => {
-    const res = await t.app.request('/health?token=secret')
+    const res = await t.app.request('/doc?token=secret')
     const id = res.headers.get('x-request-id')
     expect(id).toBeTruthy()
     const line = t.logger.lines.find((l) => l.requestId === id)
     expect(line).toMatchObject({ level: 'info', msg: 'request', method: 'GET', status: 200 })
     // The path only: query strings can carry tokens
-    expect(line?.path).toBe('/health')
+    expect(line?.path).toBe('/doc')
   })
 
   test('an incoming X-Request-Id from a proxy is kept', async () => {
@@ -65,7 +65,7 @@ describe('unhandled errors', () => {
 })
 
 describe('rate limit', () => {
-  test('API routes get 429 with Retry-After past the limit; /health and /api/auth are exempt', async () => {
+  test('API routes get 429 with Retry-After past the limit; probes and /api/auth are exempt', async () => {
     const limited = await createTestApp({ rateLimitPerMinute: 2 })
     const doc = () => limited.app.request('/doc')
     expect((await doc()).status).toBe(200)
@@ -78,6 +78,7 @@ describe('rate limit', () => {
 
     for (let i = 0; i < 3; i++) {
       expect((await limited.app.request('/health')).status).toBe(200)
+      expect((await limited.app.request('/ready')).status).toBe(200)
       expect((await limited.app.request('/api/auth/ok')).status).toBe(200)
     }
     await limited.close()

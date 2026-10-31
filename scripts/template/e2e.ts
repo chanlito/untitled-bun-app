@@ -141,6 +141,7 @@ try {
     stderr: 'inherit',
   })
   check(await waitFor(`${api}/health`), 'API answers /health')
+  check((await fetch(`${api}/ready`)).ok, 'API is ready: the database answers and is migrated')
   const spec = (await (await fetch(`${api}/doc`)).json()) as { info: { title: string } }
   check(spec.info.title.includes(NAME), `API docs carry the name "${NAME}"`)
 

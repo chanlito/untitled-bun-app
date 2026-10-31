@@ -25,7 +25,21 @@ describe('parseEnv', () => {
       LOG_LEVEL: 'info',
       LOG_FORMAT: 'json',
       TRUSTED_PROXY_HOPS: 0,
+      MIGRATE_ON_START: false,
     })
+  })
+
+  test('MIGRATE_ON_START is on outside production, and either way when set', () => {
+    const migrates = (source: Record<string, string>) => {
+      const result = parseEnv({ ...secret, ...urls, ...source })
+      if (!result.success) throw new Error(result.error)
+      return result.data.MIGRATE_ON_START
+    }
+    expect(migrates({})).toBe(true)
+    expect(migrates({ MIGRATE_ON_START: '' })).toBe(true)
+    expect(migrates({ MIGRATE_ON_START: 'false' })).toBe(false)
+    expect(migrates({ NODE_ENV: 'production', MIGRATE_ON_START: 'true' })).toBe(true)
+    expect(parseEnv({ ...secret, MIGRATE_ON_START: 'maybe' }).success).toBe(false)
   })
 
   test('development keeps its defaults and readable logs', () => {
