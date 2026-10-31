@@ -1,5 +1,5 @@
 import { config } from '@untitled-bun-app/config'
-import { html } from 'hono/html'
+import { html, raw } from 'hono/html'
 
 type LandingOptions = {
   apiUrl: string
@@ -35,17 +35,35 @@ export const LANDING_CSP = [
 
 // A small favicon so browsers stop asking for /favicon.ico (a 404 on an API)
 const FAVICON = `data:image/svg+xml,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#5b5bd6"/><path d="M10 11l6 5-6 5M18 21h5" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#111418"/><path d="M9 11l6 5-6 5M17 21h6" stroke="#f5c451" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 )}`
 
-// What a browser sees at GET /: the project's name and the links a developer wants first.
-// Everything comes from the project's config and the running config, so it suits any API.
-export function landingPage({ apiUrl, version, environment }: LandingOptions) {
+// The JSON a client gets, pretty-printed with keys and strings marked for colour. Built as a
+// string (an html`` template would get its whitespace reformatted) with every value escaped,
+// so text from config or env can't break out of the page.
+function highlightJson(value: unknown, indent = ''): string {
+  if (typeof value === 'string')
+    return `<span class="s">${Bun.escapeHTML(JSON.stringify(value))}</span>`
+  if (value === null || typeof value !== 'object') return Bun.escapeHTML(String(value))
+  const inner = `${indent}  `
+  const lines = Object.entries(value).map(
+    ([key, v]) =>
+      `${inner}<span class="k">${Bun.escapeHTML(JSON.stringify(key))}</span>: ${highlightJson(v, inner)}`,
+  )
+  return `{\n${lines.join(',\n')}\n${indent}}`
+}
+
+// What a browser sees at GET /: a terminal session showing what `curl /` returns, then the
+// links a developer wants first. Light or dark follows the browser. Everything comes from
+// the project's config and env, so it suits any API built from the template.
+export function landingPage(options: LandingOptions) {
+  const { apiUrl } = options
   const links = [
-    { href: '/reference', title: 'API reference', text: 'Every endpoint, with a client to try it' },
-    { href: '/doc', title: 'OpenAPI spec', text: 'The 3.1 document, for generated clients' },
-    { href: '/health', title: 'Health check', text: 'What load balancers and monitors poll' },
+    { href: '/reference', text: 'every endpoint, with a client to try it' },
+    { href: '/doc', text: 'the OpenAPI 3.1 spec, for generated clients' },
+    { href: '/health', text: 'what load balancers and monitors poll' },
   ]
+  const width = Math.max(...links.map((link) => link.href.length)) + 3
 
   return html`<!doctype html>
     <html lang="en">
@@ -58,25 +76,29 @@ export function landingPage({ apiUrl, version, environment }: LandingOptions) {
         <link rel="icon" href="${FAVICON}" />
         <style>
           :root {
-            --bg: #f7f7f8;
-            --card: #ffffff;
-            --text: #1c1c21;
-            --muted: #65656f;
-            --border: #e4e4e9;
-            --accent: #5b5bd6;
-            --ok: #2f9e5a;
-            --code: #f0f0f3;
+            --bg: #f3f4f6;
+            --window: #ffffff;
+            --bar: #f8f9fa;
+            --border: #dfe2e6;
+            --text: #1f2328;
+            --muted: #636c76;
+            --key: #0550ae;
+            --string: #116329;
+            --accent: #9a6700;
+            --dot: #d0d4d9;
           }
           @media (prefers-color-scheme: dark) {
             :root {
-              --bg: #111113;
-              --card: #18181b;
-              --text: #ededef;
-              --muted: #a0a0ab;
-              --border: #2a2a30;
-              --accent: #8e8ef0;
-              --ok: #4cc27a;
-              --code: #222227;
+              --bg: #0b0d10;
+              --window: #111418;
+              --bar: #111418;
+              --border: #23272e;
+              --text: #d4d8de;
+              --muted: #8b949e;
+              --key: #7dd3fc;
+              --string: #a5d6a7;
+              --accent: #f5c451;
+              --dot: #2a2f37;
             }
           }
           * {
@@ -87,153 +109,168 @@ export function landingPage({ apiUrl, version, environment }: LandingOptions) {
             min-height: 100vh;
             display: grid;
             place-items: center;
-            padding: 24px 16px;
+            padding: 32px 16px;
             background: var(--bg);
             color: var(--text);
             font:
-              16px/1.5 ui-sans-serif,
-              system-ui,
-              -apple-system,
-              'Segoe UI',
-              sans-serif;
+              15px/1.7 ui-monospace,
+              SFMono-Regular,
+              Menlo,
+              Consolas,
+              monospace;
           }
           main {
             width: 100%;
-            max-width: 560px;
+            max-width: 760px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--window);
+            overflow: hidden;
           }
-          .status {
-            display: inline-flex;
+          .bar {
+            display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 13px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bar);
             color: var(--muted);
+            font-size: 12px;
           }
-          .dot {
-            width: 8px;
-            height: 8px;
+          .bar i {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: var(--ok);
-            box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 20%, transparent);
+            background: var(--dot);
+          }
+          .bar span {
+            flex: 1;
+            text-align: center;
+            margin-right: 54px;
+          }
+          .screen {
+            padding: 28px 32px 32px;
+            display: grid;
+            gap: 20px;
+            overflow-x: auto;
           }
           h1 {
-            margin: 12px 0 4px;
-            font-size: 28px;
-            line-height: 1.2;
-            letter-spacing: -0.02em;
+            margin: 0;
+            color: var(--accent);
+            font-size: 22px;
+            line-height: 1.4;
+            letter-spacing: -0.01em;
           }
-          .lede {
-            margin: 0 0 20px;
+          p,
+          pre {
+            margin: 0;
+          }
+          pre {
+            font: inherit;
+            white-space: pre;
+          }
+          .m {
             color: var(--muted);
           }
-          .meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 24px;
+          .k {
+            color: var(--key);
           }
-          .pill {
-            font:
-              12px/1 ui-monospace,
-              SFMono-Regular,
-              Menlo,
-              monospace;
-            padding: 6px 10px;
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            background: var(--card);
-            color: var(--muted);
-          }
-          .pill b {
-            color: var(--text);
-            font-weight: 600;
+          .s {
+            color: var(--string);
           }
           nav {
             display: grid;
-            gap: 8px;
           }
           nav a {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            gap: 2px 12px;
-            padding: 14px 16px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: var(--card);
-            color: inherit;
+            color: var(--text);
             text-decoration: none;
-            transition:
-              border-color 120ms,
-              transform 120ms;
+            white-space: pre;
+            border-radius: 4px;
           }
-          nav a:hover,
-          nav a:focus-visible {
-            border-color: var(--accent);
-            transform: translateY(-1px);
+          nav a b {
+            font-weight: inherit;
+            color: var(--key);
+          }
+          nav a:hover b,
+          nav a:focus-visible b {
+            text-decoration: underline;
+            text-underline-offset: 3px;
           }
           nav a:focus-visible {
             outline: 2px solid var(--accent);
             outline-offset: 2px;
           }
-          nav strong {
-            font-weight: 600;
+          .cursor {
+            display: inline-block;
+            width: 9px;
+            height: 18px;
+            vertical-align: -3px;
+            background: var(--accent);
+            animation: blink 1.1s steps(1) infinite;
           }
-          nav code {
-            grid-row: span 2;
-            align-self: center;
-            color: var(--accent);
-          }
-          nav span {
-            color: var(--muted);
-            font-size: 14px;
-          }
-          code {
-            font:
-              13px ui-monospace,
-              SFMono-Regular,
-              Menlo,
-              monospace;
-          }
-          pre {
-            margin: 24px 0 0;
-            padding: 12px 14px;
-            border-radius: 10px;
-            background: var(--code);
-            overflow-x: auto;
-          }
-          pre code::before {
-            content: '$ ';
-            color: var(--muted);
-            user-select: none;
+          @keyframes blink {
+            50% {
+              opacity: 0;
+            }
           }
           @media (prefers-reduced-motion: reduce) {
-            nav a {
-              transition: none;
+            .cursor {
+              animation: none;
             }
-            nav a:hover {
-              transform: none;
+          }
+          @media (max-width: 560px) {
+            pre {
+              white-space: pre-wrap;
+              overflow-wrap: anywhere;
+            }
+            nav a {
+              white-space: normal;
+            }
+            nav .pad {
+              display: none;
+            }
+            nav .d {
+              display: block;
+              padding-left: 2ch;
+            }
+          }
+          @media (max-width: 480px) {
+            body {
+              font-size: 13px;
+            }
+            .screen {
+              padding: 20px 16px 24px;
             }
           }
         </style>
       </head>
       <body>
         <main>
-          <span class="status"><span class="dot"></span>Up and serving requests</span>
-          <h1>${config.name} API</h1>
-          <p class="lede">${config.description}</p>
-          <div class="meta">
-            <span class="pill">version <b>${version}</b></span>
-            <span class="pill">env <b>${environment}</b></span>
+          <div class="bar" aria-hidden="true">
+            <i></i><i></i><i></i><span>${new URL(apiUrl).host}</span>
           </div>
-          <nav>
-            ${links.map(
-              (link) =>
-                html`<a href="${link.href}"
-                  ><strong>${link.title}</strong><code>${link.href}</code
-                  ><span>${link.text}</span></a
-                >`,
-            )}
-          </nav>
-          <pre><code>curl ${apiUrl}/health</code></pre>
+          <div class="screen">
+            <div>
+              <h1>${config.name} API</h1>
+              <p class="m"># ${config.description}</p>
+            </div>
+            <div>
+              <p><span class="m">$</span> curl -s ${apiUrl}/</p>
+              <pre>${raw(highlightJson(landingJson(options)))}</pre>
+            </div>
+            <nav aria-label="Where to go next">
+              <span class="m"># where to go next</span>
+              ${links.map(
+                (link) =>
+                  html`<a href="${link.href}"
+                    ><span class="m">→</span> <b>${link.href}</b
+                    ><span class="pad">${' '.repeat(width - link.href.length)}</span
+                    ><span class="m d">${link.text}</span></a
+                  >`,
+              )}
+            </nav>
+            <p aria-hidden="true"><span class="m">$</span> <span class="cursor"></span></p>
+          </div>
         </main>
       </body>
     </html>`

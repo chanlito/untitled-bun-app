@@ -42,6 +42,8 @@ describe('app', () => {
     expect(page).toContain(`<title>${config.name} API</title>`)
     for (const href of ['/reference', '/doc', '/health']) expect(page).toContain(`href="${href}"`)
     expect(page).not.toContain('<script')
+    // The terminal shows the same JSON an API client gets, escaped
+    expect(page).toContain('<span class="k">&quot;links&quot;</span>')
   })
 
   test('unknown routes return 404 { message }', async () => {
