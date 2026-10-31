@@ -9,21 +9,18 @@ const logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT })
 
 // Signal handlers come first: in a container the server is PID 1, which ignores a signal it
 // has no handler for, so a SIGTERM during startup would wait out the platform's kill timer.
-// `bun --hot` runs this file again on each change, so they are added once and call the
-// shutdown of the latest run. A second signal quits without waiting.
-type Running = {
-  shutdown?: (reason: string) => Promise<void>
-  stopping?: boolean
-  listening?: boolean
-}
+// Before the server listens there is nothing to drain, so a signal just exits. Repeats join
+// the shutdown already running (`bun run` forwards Ctrl-C, so one press arrives twice).
+// `bun --hot` runs this file again on each change: the handlers are added once and call the
+// shutdown of the latest run.
+type Running = { shutdown?: (reason: string) => Promise<void>; listening?: boolean }
 const running = ((globalThis as { __api?: Running }).__api ??= {})
 running.shutdown = undefined
 if (!running.listening) {
   running.listening = true
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, () => {
-      if (!running.shutdown || running.stopping) process.exit(1)
-      running.stopping = true
+      if (!running.shutdown) process.exit(0)
       running.shutdown(signal).then(
         () => process.exit(0),
         (err: unknown) => {
@@ -65,6 +62,7 @@ running.shutdown = createShutdown({
   server,
   controller: shutdownController,
   logger,
+  delayMs: env.SHUTDOWN_DELAY_MS,
   graceMs: env.SHUTDOWN_GRACE_MS,
   // Requests are done by now: whatever query is still open (a probe) gets a second
   close: () => db.$client.close({ timeout: 1 }),

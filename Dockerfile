@@ -7,17 +7,24 @@
 # Keep in step with .bun-version (CI checks they match)
 ARG BUN_VERSION=1.4.4
 
+# The package manifests alone, so the install layer below is rebuilt only when they change
+FROM oven/bun:${BUN_VERSION}-slim AS manifests
+WORKDIR /app
+COPY . .
+RUN find . -type f ! -name package.json ! -name bun.lock ! -name bunfig.toml -delete
+
 FROM oven/bun:${BUN_VERSION}-slim
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY . .
+COPY --from=manifests /app ./
 # Production dependencies of the API and the workspace packages it imports, nothing else.
 # --omit=peer skips optional peers such as drizzle-kit and PGlite (130 MB); peers the API
 # uses are its own dependencies too, so they stay. The cache mount keeps Bun's download
 # cache out of the image.
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile --production --omit=peer --filter '@untitled-bun-app/api'
+COPY . .
 
 USER bun
 EXPOSE 3141

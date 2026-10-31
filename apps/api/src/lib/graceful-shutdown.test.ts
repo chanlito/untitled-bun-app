@@ -68,6 +68,23 @@ describe('graceful shutdown', () => {
     )
   })
 
+  test('with delayMs, keeps serving after /ready fails, then stops', async () => {
+    const server = slowServer(0)
+    const controller = new AbortController()
+    const shutdown = createShutdown({
+      server,
+      controller,
+      logger: createMemoryLogger(),
+      delayMs: 200,
+      graceMs: 1_000,
+    })
+    const done = shutdown('SIGTERM')
+    expect(controller.signal.aborted).toBe(true)
+    expect((await fetch(server.url)).ok).toBe(true)
+    await done
+    expect(await fetch(server.url).catch((err: { code: string }) => err.code)).toBe('ECONNREFUSED')
+  })
+
   test('a second signal joins the shutdown already running', async () => {
     const server = slowServer(0)
     let closes = 0

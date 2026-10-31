@@ -43,11 +43,17 @@ const Env = z.object({
   // /ready answers 503 while any migration is pending, so traffic waits for it either way.
   // An empty value means unset, as with the other keys .env files list without a value
   MIGRATE_ON_START: z.preprocess(unsetIfEmpty, z.stringbool().optional()),
-  // How long a shutdown (SIGTERM) waits for requests in flight before cutting them. Keep it
+  // On SIGTERM, how long /ready answers 503 while the server still takes new connections,
+  // so load balancers stop routing to it first (Kubernetes, ECS, Fly: a few seconds)
+  SHUTDOWN_DELAY_MS: z.preprocess(
+    unsetIfEmpty,
+    z.coerce.number().int().min(0).max(60_000).default(0),
+  ),
+  // Then how long requests in flight get to finish before they are cut. Keep both together
   // under the platform's own grace period (docker stop: 10 s, Kubernetes: 30 s).
   SHUTDOWN_GRACE_MS: z.preprocess(
     unsetIfEmpty,
-    z.coerce.number().int().nonnegative().default(8_000),
+    z.coerce.number().int().min(0).max(600_000).default(8_000),
   ),
 })
 

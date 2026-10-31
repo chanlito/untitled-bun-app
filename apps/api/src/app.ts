@@ -217,6 +217,8 @@ export function createApp({
     .get('/ready', async (c) => {
       if (shutdownSignal?.aborted) return c.json({ ok: false, reason: 'shutting down' }, 503)
       const result = await readiness()
+      // Checked again: shutdown may have started while the check ran
+      if (shutdownSignal?.aborted) return c.json({ ok: false, reason: 'shutting down' }, 503)
       return result.ok ? c.json(result, 200) : c.json(result, 503)
     })
     .route('/', tasksRouter)

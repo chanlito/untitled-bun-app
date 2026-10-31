@@ -43,7 +43,7 @@ docker run -d --env-file prod.env -p 3141:3141 api
 
 - **Liveness: `GET /health`.** 200 while the process answers. It doesn't touch the database, so an outage there doesn't get every container restarted.
 - **Readiness: `GET /ready`.** 200 when the database answers within 2 s and has every migration the image ships with; 503 otherwise (the log says which), and from the moment shutdown starts. Route traffic on this one.
-- **Shutdown:** on SIGTERM the server answers 503 on `/ready`, stops accepting connections, lets requests in flight finish for up to `SHUTDOWN_GRACE_MS` (8 s), then closes the database pool and exits 0. Keep that under the platform's own grace period (`docker stop` waits 10 s, Kubernetes 30 s). On Kubernetes, a `preStop` sleep of a few seconds lets the endpoint removal reach the load balancers before the listener closes.
+- **Shutdown:** on SIGTERM the server answers 503 on `/ready`, keeps serving for `SHUTDOWN_DELAY_MS` (default 0) so load balancers stop sending it traffic, stops accepting connections, lets requests in flight finish for up to `SHUTDOWN_GRACE_MS` (8 s), then closes the database pool and exits 0. Behind a load balancer that routes on `/ready` (Kubernetes, ECS, Fly), set the delay to a few seconds. Keep both together under the platform's own grace period (`docker stop` waits 10 s, Kubernetes 30 s).
 
 Logs are JSON lines on stdout, ready for any log shipper.
 
