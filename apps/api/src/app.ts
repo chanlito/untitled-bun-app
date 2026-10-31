@@ -1,20 +1,69 @@
 import { project } from '@project'
 import { Scalar } from '@scalar/hono-api-reference'
+import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
+import { requestId } from 'hono/request-id'
+import { secureHeaders } from 'hono/secure-headers'
+import { timeout } from 'hono/timeout'
 import type { Db } from './db/client'
 import { env } from './env'
 import { createAuth } from './lib/auth'
+import { clientIp } from './lib/client-ip'
 import { createRouter } from './lib/create-router'
+import { createLogger, type Logger } from './lib/logger'
 import type { Mailer } from './lib/mailer'
+import { rateLimit } from './lib/rate-limit'
 import { tasksRouter } from './modules/tasks/tasks.index'
 import { createServices } from './services'
 
-export function createApp({ db, mailer }: { db: Db; mailer: Mailer }) {
+// Requests larger than this get a 413 before any handler reads them
+export const MAX_BODY_BYTES = 1024 * 1024
+// A handler still running after this gets a 504; index.ts keeps idle sockets open longer
+export const REQUEST_TIMEOUT_MS = 30_000
+
+export type AppOptions = {
+  db: Db
+  mailer: Mailer
+  logger?: Logger
+  rateLimitPerMinute?: number
+  proxyHops?: number
+}
+
+export function createApp({
+  db,
+  mailer,
+  logger = createLogger({ level: env.LOG_LEVEL, format: env.LOG_FORMAT }),
+  rateLimitPerMinute = env.RATE_LIMIT_PER_MINUTE,
+  proxyHops = env.TRUSTED_PROXY_HOPS,
+}: AppOptions) {
   const auth = createAuth({ db, mailer })
   const services = createServices(db)
+  const ip = (c: Parameters<typeof clientIp>[0]) => clientIp(c, { proxyHops })
 
   const app = createRouter()
+
+  // Echoes a valid incoming X-Request-Id (from a proxy) or makes one, and returns it
+  app.use(requestId({ generator: () => Bun.randomUUIDv7() }))
+
+  // One line per request. The path only: query strings can carry tokens (magic links)
+  app.use(async (c, next) => {
+    const start = performance.now()
+    await next()
+    const fields = {
+      requestId: c.var.requestId,
+      method: c.req.method,
+      path: c.req.path,
+      status: c.res.status,
+      durationMs: Math.round(performance.now() - start),
+    }
+    if (c.res.status >= 500) logger.error('request', fields)
+    else logger.info('request', fields)
+  })
+
+  // Hono's defaults: HSTS, nosniff, frame denial, no referrer leaks, and so on. No CSP:
+  // this serves JSON and Scalar's page, which loads its script from a CDN.
+  app.use(secureHeaders())
 
   app.use(
     cors({
@@ -24,6 +73,21 @@ export function createApp({ db, mailer }: { db: Db; mailer: Mailer }) {
       exposeHeaders: ['set-auth-token', 'set-auth-jwt'],
     }),
   )
+  app.use(
+    bodyLimit({
+      maxSize: MAX_BODY_BYTES,
+      onError: (c) => c.json({ message: 'Request body too large' }, 413),
+    }),
+  )
+  app.use(timeout(REQUEST_TIMEOUT_MS))
+
+  // Better Auth limits its own routes; everything else is limited here. /health is left
+  // out so load balancer probes, which all come from one address, never trip it.
+  const limiter = rateLimit({ max: rateLimitPerMinute, key: ip })
+  app.use(async (c, next) =>
+    c.req.path === '/health' || c.req.path.startsWith('/api/auth/') ? next() : limiter(c, next),
+  )
+
   app.use(async (c, next) => {
     c.set('auth', auth)
     c.set('services', services)
@@ -33,12 +97,22 @@ export function createApp({ db, mailer }: { db: Db; mailer: Mailer }) {
   app.notFound((c) => c.json({ message: `Not found: ${c.req.path}` }, 404))
 
   app.onError((err, c) => {
-    if (err instanceof HTTPException) return c.json({ message: err.message }, err.status)
-    console.error(err)
+    if (err instanceof HTTPException) {
+      // timeout() throws a bare 504 with an empty message
+      const message = err.message || (err.status === 504 ? 'Request timed out' : 'Error')
+      return c.json({ message }, err.status)
+    }
+    logger.error('unhandled error', { requestId: c.var.requestId, err })
     return c.json({ message: 'Internal server error' }, 500)
   })
 
-  app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+  // Better Auth reads the client IP (for its rate limits and sessions) from x-client-ip
+  // alone, set here from our own resolution so a client can't choose it
+  app.on(['GET', 'POST'], '/api/auth/*', (c) => {
+    const headers = new Headers(c.req.raw.headers)
+    headers.set('x-client-ip', ip(c))
+    return auth.handler(new Request(c.req.raw, { headers }))
+  })
 
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearer', {
     type: 'http',

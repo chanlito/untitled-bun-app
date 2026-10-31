@@ -30,6 +30,8 @@ export function createAuth({ db, mailer }: { db: Db; mailer: Mailer }) {
     verification: { modelName: 'verifications' },
     advanced: {
       cookiePrefix: project.slug,
+      // app.ts sets this header from the socket or trusted proxies; never X-Forwarded-For
+      ipAddress: { ipAddressHeaders: ['x-client-ip'] },
       database: { generateId: () => Bun.randomUUIDv7() },
     },
     socialProviders: github ? { github } : {},
