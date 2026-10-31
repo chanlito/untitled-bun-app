@@ -14,7 +14,7 @@
 //   bun scripts/shots.ts /pricing/ --publish    push the sheets to the proof branch
 //                                               and print the Markdown for the PR
 //
-// A path in any language brings the others (from show-your-work.json,
+// A path in any language brings the others (from skills.config.json,
 // "site.languages"); --langs en limits that. With no paths it shoots
 // "site.pages". API calls listed in "site.fakes" get made-up answers, so
 // pages that need a backend still show what they would. --mark takes any

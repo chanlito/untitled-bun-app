@@ -1,5 +1,5 @@
 // Everything to check before a push, in one go: the branch name, the commit
-// subjects, the project's own checks from show-your-work.json ("checks"),
+// subjects, the project's own checks from skills.config.json ("checks"),
 // and that committed lessons stay under the cap. Then it prints the risk
 // tier and the preview link for the PR.
 //

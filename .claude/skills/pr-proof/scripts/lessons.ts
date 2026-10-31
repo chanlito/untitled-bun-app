@@ -23,7 +23,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config, root } from './config';
+import { CONFIG_FILE, config, root } from './config';
 import { output } from './git';
 
 /** This skill's name: the folder above scripts/. */
@@ -39,7 +39,10 @@ export function lessonsFile(skill = SKILL) {
   // Inside the shared .git folder, so every worktree of the clone sees them.
   const common = output(['git', 'rev-parse', '--git-common-dir']) || '.git';
   const git = isAbsolute(common) ? common : join(process.cwd(), common);
-  return join(git, 'show-your-work', 'lessons', `${skill}.md`);
+  const file = join(git, 'skills', 'lessons', `${skill}.md`);
+  // Where they were kept before the config file was renamed.
+  const old = join(git, 'show-your-work', 'lessons', `${skill}.md`);
+  return !existsSync(file) && existsSync(old) ? old : file;
 }
 
 const isLesson = (line: string) => /^[-*]\s/.test(line);
@@ -61,7 +64,7 @@ function write(file: string, skill: string, lessons: string[]) {
 function add(text: string, pr?: string) {
   const file = lessonsFile();
   if (!file) {
-    console.log('Lessons are off in show-your-work.json.');
+    console.log(`Lessons are off in ${CONFIG_FILE}.`);
     return;
   }
   const today = new Date().toISOString().slice(0, 10);

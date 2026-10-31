@@ -4,7 +4,7 @@
 //   bun scripts/risk.ts a.ts b/c.ts   these files instead
 //   bun scripts/risk.ts --json        the same, for scripts
 //
-// The paths for each tier come from show-your-work.json ("tiers").
+// The paths for each tier come from skills.config.json ("tiers").
 
 import { config } from './config';
 import { label, printTier, tier } from './tier';

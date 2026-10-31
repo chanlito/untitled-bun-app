@@ -1,4 +1,4 @@
-// The project's settings for these skills, from show-your-work.json at the
+// The project's settings for these skills, from skills.config.json at the
 // root of the repo. Every field is optional; what's left out falls back to
 // the defaults below, which suit a plain web project with one language.
 //
@@ -183,7 +183,9 @@ export const DEFAULTS: Config = {
   },
 };
 
-export const CONFIG_FILE = 'show-your-work.json';
+export const CONFIG_FILE = 'skills.config.json';
+/** The file's old name, still read when the new one isn't there. */
+export const LEGACY_CONFIG_FILE = 'show-your-work.json';
 
 type Plain = Record<string, unknown>;
 const isPlain = (v: unknown): v is Plain =>
@@ -209,10 +211,10 @@ export function root() {
 let cached: Config | undefined;
 export function config(): Config {
   if (cached) return cached;
-  const file = join(root(), CONFIG_FILE);
-  const mine = existsSync(file)
-    ? JSON.parse(readFileSync(file, 'utf8'))
-    : undefined;
+  const file = [CONFIG_FILE, LEGACY_CONFIG_FILE]
+    .map((name) => join(root(), name))
+    .find((path) => existsSync(path));
+  const mine = file ? JSON.parse(readFileSync(file, 'utf8')) : undefined;
   if (isPlain(mine)) delete mine.$schema;
   return (cached = merge(DEFAULTS, mine));
 }
