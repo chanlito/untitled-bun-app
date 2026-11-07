@@ -14,12 +14,12 @@
     "db:admin": "bun --env-file=../../.env.local src/db/create-admin.ts"
   },
   "dependencies": {
-    "@better-auth/api-key": "1.7.14",
+    "@better-auth/api-key": "1.7.17",
     "@hono/zod-openapi": "catalog:",
     "@untitled-bun-app/config": "workspace:*",
     "@untitled-bun-app/shared": "workspace:*",
     "@scalar/hono-api-reference": "^0.12.17",
-    "better-auth": "1.7.14",
+    "better-auth": "1.7.17",
     "drizzle-orm": "1.0.0-rc.5",
     "hono": "catalog:",
     "hono-rate-limiter": "0.5.4",
@@ -29,7 +29,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "0.5.14",
+    "@electric-sql/pglite": "0.5.15",
     "@types/bun": "catalog:",
     "drizzle-kit": "1.0.0-rc.5"
   }
