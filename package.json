@@ -10,7 +10,7 @@
     "catalog": {
       "@hono/zod-openapi": "^1.6.3",
       "@types/bun": "^1.4.4",
-      "hono": "^4.13.14",
+      "hono": "^4.13.16",
       "zod": "^4.6.7"
     }
   },
